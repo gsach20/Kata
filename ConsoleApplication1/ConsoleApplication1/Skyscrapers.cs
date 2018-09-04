@@ -26,6 +26,11 @@ namespace ConsoleApplication1
                 Size = size;
                 Indices = indices;
             }
+
+            public override string ToString()
+            {
+                return Clue+","+Size;
+            }
         }
 
         private static LaneDetails[] laneDetailses;
@@ -131,13 +136,13 @@ namespace ConsoleApplication1
 
         private static void PrintValues()
         {
-            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+            Stack<LaneDetails> orderedClues = new Stack<LaneDetails>(Enumerable.Range(0, 4 * Skyscrapers.Size)
                 .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests.GetLaneIndices(clueIndex)))
                 .OrderBy(t => t.Item2[0])
-                .ThenBy(t => t.Item2[1]).Select(t => laneDetailses[t.Item1].Clue).Reverse());
+                .ThenBy(t => t.Item2[1]).Select(t => laneDetailses[t.Item1]).Reverse());
             Debug.Print(Environment.NewLine + Environment.NewLine
                                             + "      " +
-                                            string.Join("       ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
+                                            string.Join("      ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
                                             Environment.NewLine
                                             + string.Join(Environment.NewLine,
                                                 Skyscrapers.PossibleValues.Select(r =>
@@ -145,7 +150,7 @@ namespace ConsoleApplication1
                                                     string.Join("|", r.Select(c => string.Join(",", c))) + "| " +
                                                     orderedClues.Pop())) + Environment.NewLine
                                             + "      " +
-                                            string.Join("       ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
+                                            string.Join("      ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
                                             Environment.NewLine);
         }
 
