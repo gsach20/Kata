@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
-using Castle.Components.DictionaryAdapter;
-using Castle.Core.Internal;
 using NUnit.Framework;
 
 namespace ConsoleApplication1
@@ -59,6 +55,7 @@ namespace ConsoleApplication1
                 for (var j = 0; j < gridValues[i].Length; j++)
                 {
                     gridValues[i][j] = new[] {1, 2, 3, 4};
+                    CellDetailsList[i][j] = new CellDetails();
                 }
             }
 
@@ -70,7 +67,7 @@ namespace ConsoleApplication1
             }
 
 
-            PrintValues();
+            //PrintValues();
             for (int i = 0; i < 3; i++)
             {
                 //Process clues
@@ -79,15 +76,15 @@ namespace ConsoleApplication1
                     ProcessClues(laneDetails, gridValues);
 
                     Debug.WriteLine("Lane first indices: " + string.Join(",",laneDetails.Indices[0]));
-                    PrintValues();
+                    //PrintValues();
                 }
 
                 //Eliminate
-                EliminateValues(clues, gridValues);
+                //EliminateValues(clues, gridValues);
 
                 //Fill remaining
 
-                PrintValues();
+                //PrintValues();
             }
 
             Debug.Print(string.Join(" ", laneDetailses.Select(l => l.Clue.ToString() + "," + l.Size.ToString())));
@@ -104,60 +101,60 @@ namespace ConsoleApplication1
             return grid;
         }
 
-        private static void EliminateValues(int[] clues, int[][][] gridValues)
-        {
-            for (int rowIndex = 0; rowIndex < 4; rowIndex++)
-            {
-                for (int i = 0; i < Size; i++)
-                {
-                    int uniqueIndex = -1;
-                    for (int colIndex = 0; colIndex < Size; colIndex++)
-                    {
-                        if (gridValues[rowIndex][colIndex][i] != 0)
-                        {
-                            if (uniqueIndex != -1)
-                            {
-                                uniqueIndex = -1;
-                                break;
-                            }
+        //private static void EliminateValues(int[] clues, int[][][] gridValues)
+        //{
+        //    for (int rowIndex = 0; rowIndex < 4; rowIndex++)
+        //    {
+        //        for (int i = 0; i < Size; i++)
+        //        {
+        //            int uniqueIndex = -1;
+        //            for (int colIndex = 0; colIndex < Size; colIndex++)
+        //            {
+        //                if (gridValues[rowIndex][colIndex][i] != 0)
+        //                {
+        //                    if (uniqueIndex != -1)
+        //                    {
+        //                        uniqueIndex = -1;
+        //                        break;
+        //                    }
 
-                            uniqueIndex = colIndex;
-                        }
-                    }
+        //                    uniqueIndex = colIndex;
+        //                }
+        //            }
 
-                    if (uniqueIndex != -1) SetCellValue(i + 1, new[] {rowIndex, uniqueIndex}, gridValues);
-                }
-            }
+        //            if (uniqueIndex != -1) SetCellValue(i + 1, new[] {rowIndex, uniqueIndex}, gridValues);
+        //        }
+        //    }
 
-            for (int colIndex = 0; colIndex < 4; colIndex++)
-            {
-                for (int i = 0; i < Size; i++)
-                {
-                    int uniqueIndex = -1;
-                    for (int rowIndex = 0; rowIndex < Size; rowIndex++)
-                    {
-                        if (gridValues[rowIndex][colIndex][i] != 0)
-                        {
-                            if (uniqueIndex != -1)
-                            {
-                                uniqueIndex = -1;
-                                break;
-                            }
+        //    for (int colIndex = 0; colIndex < 4; colIndex++)
+        //    {
+        //        for (int i = 0; i < Size; i++)
+        //        {
+        //            int uniqueIndex = -1;
+        //            for (int rowIndex = 0; rowIndex < Size; rowIndex++)
+        //            {
+        //                if (gridValues[rowIndex][colIndex][i] != 0)
+        //                {
+        //                    if (uniqueIndex != -1)
+        //                    {
+        //                        uniqueIndex = -1;
+        //                        break;
+        //                    }
 
-                            uniqueIndex = rowIndex;
-                        }
-                    }
+        //                    uniqueIndex = rowIndex;
+        //                }
+        //            }
 
-                    if (uniqueIndex != -1) SetCellValue(i + 1, new[] {uniqueIndex, colIndex}, gridValues);
-                }
-            }
+        //            if (uniqueIndex != -1) SetCellValue(i + 1, new[] {uniqueIndex, colIndex}, gridValues);
+        //        }
+        //    }
 
-        }
+        //}
 
         public static string PrintValues()
         {
             Stack<LaneDetails> orderedClues = new Stack<LaneDetails>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests.GetLaneIndices(clueIndex)))
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex)))
                 .OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => laneDetailses[t.Item1]).Reverse());
 
@@ -175,7 +172,8 @@ namespace ConsoleApplication1
                                                 string.Join("      ",
                                                     Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
                                                 Environment.NewLine;
-            Debug.Print(values);
+            //Debug.Print(values);
+            Console.Write(values);
             return values;
         }
 
@@ -185,11 +183,29 @@ namespace ConsoleApplication1
             int size = laneDetails.Size;
             int[][] laneIndices = laneDetails.Indices;
             if (clue == 0) return false;
-            for (int value = size; value > size-clue+1; value--)
+            if (clue == 1)
             {
-                for (int i = 0; i < clue + value - size - 1; i++)
+                SetCellValue(size, laneIndices[0]);
+            }
+            else if (clue == size)
+            {
+                for (int i = 0; i < size; i++)
                 {
-                    RemoveFromCell(value, laneIndices[i], gridValues);
+                    SetCellValue(i+1, laneIndices[i]);
+                }
+            }
+            else
+            {
+                if (clue == 2 && size > 1)
+                {
+                    RemoveFromCell(size-1, laneIndices[1], gridValues);
+                }
+                for (int value = size; value > size - clue + 1; value--)
+                {
+                    for (int i = 0; i < clue + value - size - 1; i++)
+                    {
+                        RemoveFromCell(value, laneIndices[i], gridValues);
+                    }
                 }
             }
 
@@ -207,7 +223,7 @@ namespace ConsoleApplication1
                 if (size > 1)
                 {
                     //laneDetails.Clue = 0;
-                    SetCellValue(size, laneIndices[0], gridValues);
+                    SetCellValue(size, laneIndices[0]);
                 }
             }
             else if (clue == size)
@@ -215,7 +231,7 @@ namespace ConsoleApplication1
                 //laneDetails.Clue = 0;
                 for (int i = 0; i < size; i++)
                 {
-                    SetCellValue(i + 1, laneIndices[i], gridValues);
+                    SetCellValue(i + 1, laneIndices[i]);
                 }
             }
             else
@@ -233,19 +249,52 @@ namespace ConsoleApplication1
             return true;
         }
 
-        private static void SetCellValue(int value, int[] cellIndices, int[][][] gridValues)
+        private static void SetCellValue(int value, int[] cellIndices)
         {
             CellDetails cellDetails = GetCellDetails(cellIndices);
 
+            if(cellDetails.ValueSet == value) return;
+            cellDetails.ValueSet = value;
 
-
-            int[] cellValues = GetCell(cellIndices);
-
+            int[][][] gridValues = PossibleValues;
             for (var i = 0; i < 4; i++)
             {
                 if (i == value - 1) continue;
-                cellValues[i] = 0;
+                RemoveFromCell(i+1, cellIndices, gridValues);
             }
+
+            foreach (int laneIndex in GetClueIndices(cellIndices))
+            {
+                LaneDetails laneDetails = laneDetailses[laneIndex];
+
+                if(laneDetails.Clue == 0) continue;
+                int[][] laneIndices = laneDetails.Indices;
+               
+                int oldSize = laneDetails.Size;
+                int newSize = oldSize;
+                for (; newSize > 0; newSize--)
+                {
+                    if (GetCellDetails(laneIndices[newSize-1]).ValueSet == 0) break;
+                }
+                if (newSize == oldSize) continue;
+
+                laneDetails.Size = newSize;
+                
+                int numberOfVisible = 1;
+                int highestBuildingSize = GetCellDetails(laneIndices[newSize]).ValueSet;
+                for (int j = newSize+1; j < oldSize; j++)
+                {
+                    int currBuildingSize = GetCellDetails(laneIndices[j]).ValueSet;
+                    if (currBuildingSize > highestBuildingSize)
+                    {
+                        numberOfVisible++;
+                        highestBuildingSize = currBuildingSize;
+                    }
+                }
+
+                laneDetails.Clue = laneDetails.Clue > numberOfVisible ? laneDetails.Clue - numberOfVisible : 0;
+            }
+
 
             for (int i = 0; i < 4; i++)
             {
@@ -314,7 +363,7 @@ namespace ConsoleApplication1
         {
             int uniqueValueInCell = GetUniqueValueInCell(cellIndices);
             if(uniqueValueInCell > 0)
-                SetCellValue(uniqueValueInCell, cellIndices, PossibleValues);
+                SetCellValue(uniqueValueInCell, cellIndices);
 
 
             //Iterate over column
@@ -335,7 +384,7 @@ namespace ConsoleApplication1
                     }
                 }
 
-                if(uniqueCellIndices != null) SetCellValue(value, uniqueCellIndices, PossibleValues);
+                if(uniqueCellIndices != null) SetCellValue(value, uniqueCellIndices);
             }
             
             //Iterate over rows
@@ -356,7 +405,7 @@ namespace ConsoleApplication1
                     }
                 }
 
-                if(uniqueCellIndices != null) SetCellValue(value, uniqueCellIndices, PossibleValues);
+                if(uniqueCellIndices != null) SetCellValue(value, uniqueCellIndices);
             }
         }
 
@@ -447,13 +496,8 @@ namespace ConsoleApplication1
 
             return laneIndices;
         }
-    }
 
-    [TestFixture]
-    public class SkyscrapersTests
-    {
-        private const int Size = Skyscrapers.Size;
-        public static int[] GetLaneIndices(int clueIndex)
+        public static int[] GetLaneIndices2(int clueIndex)
         {
             if (clueIndex < Size)
             {
@@ -469,6 +513,13 @@ namespace ConsoleApplication1
             }
             return new[] { 4 * Size - clueIndex - 1, 0 };
         }
+    }
+
+    [TestFixture]
+    public class SkyscrapersTests
+    {
+        private const int Size = Skyscrapers.Size;
+        
 
 
         [Test]
@@ -486,7 +537,7 @@ namespace ConsoleApplication1
                 new []{2, 1, 3, 4 }};
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -497,7 +548,7 @@ namespace ConsoleApplication1
                 + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
                 + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count(v=>v==0)==3 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
                 + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
-                + Environment.NewLine + Skyscrapers.PrintValues()
+                //+ Environment.NewLine + Skyscrapers.PrintValues()
             );
         }
 
@@ -517,7 +568,7 @@ namespace ConsoleApplication1
 
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -528,7 +579,39 @@ namespace ConsoleApplication1
                 + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
                 + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count(v=>v==0)==3 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
                 + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
-                + Environment.NewLine + Skyscrapers.PrintValues()
+                //+ Environment.NewLine + Skyscrapers.PrintValues()
+            );
+        }
+
+        [Test]
+        public void SolveSkyscrapers3()
+        {
+            var clues = new[]{ 
+                1, 2, 4, 2,  
+                2, 1, 3, 2,  
+                3, 1, 2, 3,
+                3, 2, 2, 1};
+
+            var expected = new []{ 
+                new []{ 4, 2, 1, 3}, 
+                new []{ 3, 1, 2, 4}, 
+                new []{ 1, 4, 3, 2}, 
+                new []{ 2, 3, 4, 1}};
+
+
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues);
+            CollectionAssert.AreEqual(expected, actual,
+                Environment.NewLine
+                + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
+                + Environment.NewLine + Environment.NewLine
+                + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
+                + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count(v=>v==0)==3 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
+                + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
+                //+ Environment.NewLine + Skyscrapers.PrintValues()
             );
         }
     }
