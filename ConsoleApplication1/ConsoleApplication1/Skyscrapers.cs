@@ -67,24 +67,25 @@ namespace ConsoleApplication1
 
 
             PrintValues();
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 10; i++)
             {
                 //Process clues
                 foreach (LaneDetails laneDetails in laneDetailses)
                 {
                     ProcessClues(laneDetails);
 
-                    Debug.WriteLine("Lane first indices: " + string.Join(",",laneDetails.Indices[0]));
-                    Console.WriteLine("Lane first indices: " + string.Join(",",laneDetails.Indices[0]));
-                    PrintValues();
+                    //Debug.WriteLine("Lane first indices: " + string.Join(",", laneDetails.Indices[0]));
+                    //Console.WriteLine("Lane first indices: " + string.Join(",", laneDetails.Indices[0]));
+                    
+                    //PrintValues();
                 }
 
                 //Eliminate
                 //EliminateValues(clues, gridValues);
 
-                //Fill remaining
-
-                PrintValues();
+                if(PossibleValues.Count(r => r.Count(c => c.Count != 1) != 0) == 0) break;
+                
+                //PrintValues();
             }
 
             //Debug.Print(string.Join(" ", laneDetailses.Select(l => l.Clue.ToString() + "," + l.Size.ToString())));
@@ -98,6 +99,9 @@ namespace ConsoleApplication1
                     grid[rowIndex][colIndex] = PossibleValues[rowIndex][colIndex].Aggregate((a, b) => a + b);
                 }
             }
+
+            PrintValues();
+
             return grid;
         }
 
@@ -166,7 +170,7 @@ namespace ConsoleApplication1
                                                 + string.Join(Environment.NewLine,
                                                     Skyscrapers.PossibleValues.Select(r =>
                                                         orderedClues.Pop() + " |" +
-                                                        string.Join("|", r.Select(c => string.Join(",", c))) + "| " +
+                                                        string.Join("|", r.Select(c => string.Join(",", c)+ string.Concat(Enumerable.Range(0,Size-c.Count).Select(i => "  ")))) + "| " +
                                                         orderedClues.Pop())) + Environment.NewLine
                                                 + "      " +
                                                 string.Join("      ",
@@ -267,6 +271,9 @@ namespace ConsoleApplication1
                 LaneDetails laneDetails = laneDetailses[laneIndex];
 
                 if(laneDetails.Clue == 0) continue;
+                
+                if(value!=laneDetails.Size) continue;
+
                 int[][] laneIndices = laneDetails.Indices;
                
                 int oldSize = laneDetails.Size;
@@ -535,13 +542,7 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                Environment.NewLine
-                + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
-                + Environment.NewLine + Environment.NewLine
-                + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
-                + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count(v=>v==0)==3 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
-                + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
-                //+ Environment.NewLine + Skyscrapers.PrintValues()
+                ErrorMessage(expected, orderedClues)
             );
         }
 
@@ -566,13 +567,7 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                Environment.NewLine
-                + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
-                + Environment.NewLine + Environment.NewLine
-                + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
-                + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count(v=>v==0)==3 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
-                + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
-                //+ Environment.NewLine + Skyscrapers.PrintValues()
+                ErrorMessage(expected, orderedClues)
             );
         }
 
@@ -598,14 +593,71 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                Environment.NewLine
-                + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
-                + Environment.NewLine + Environment.NewLine
-                + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
-                + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count(v=>v==0)==3 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
-                + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
-                + Environment.NewLine + Skyscrapers.PrintValues()
+                ErrorMessage(expected, orderedClues)
             );
+        }
+
+        [Test]
+        public void SolveSkyscrapers4()
+        {
+            var clues = new[]{ 
+                2, 2, 1, 3,  
+                2, 2, 3, 1,  
+                1, 2, 2, 3,
+                3, 2, 1, 3};
+
+            var expected = new []{ 
+                new []{ 1, 3, 4, 2}, 
+                new []{ 4, 2, 1, 3}, 
+                new []{ 3, 4, 2, 1}, 
+                new []{ 2, 1, 3, 4}};
+
+
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues);
+            CollectionAssert.AreEqual(expected, actual,
+                ErrorMessage(expected, orderedClues)
+            );
+        }
+
+        [Test]
+        public void SolveSkyscrapers5()
+        {
+            var clues = new[]{ 
+                0, 2, 0, 0,  
+                0, 3, 0, 0,  
+                0, 1, 0, 0,
+                0, 0, 1, 2};
+
+            var expected = new []{ 
+                new []{ 3, 2, 1, 4}, 
+                new []{ 4, 1, 3, 2}, 
+                new []{ 1, 4, 2, 3}, 
+                new []{ 2, 3, 4, 1}};
+
+
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues);
+            CollectionAssert.AreEqual(expected, actual,
+                ErrorMessage(expected, orderedClues)
+            );
+        }
+
+        private static string ErrorMessage(int[][] expected, Stack<int> orderedClues)
+        {
+            return Environment.NewLine
+                   + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
+                   + Environment.NewLine + Environment.NewLine
+                   + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
+                   + string.Join(Environment.NewLine, Skyscrapers.PossibleValues.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.Count==1 ? c.First(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
+                   + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
+                   + Environment.NewLine + Skyscrapers.PrintValues();
         }
     }
 
