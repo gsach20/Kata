@@ -223,8 +223,10 @@ namespace ConsoleApplication1
             for (int i = 0; i < 10; i++)
             {
                 //Process clues
-                foreach (Lane lane in LanesList)
+                //foreach (Lane lane in LanesList)
+                for (var i1 = 0; i1 < LanesList.Length; i1++)
                 {
+                    Lane lane = LanesList[i1];
                     ProcessClues(lane);
 
                     Debug.WriteLine(Environment.NewLine+"Lane first indices: " + lane.FirstIndices());
@@ -288,7 +290,7 @@ namespace ConsoleApplication1
             if (clue == 0) return false;
             if (clue == 1)
             {
-                lane.Cells[0].SetCellValue(size);
+                lane.Cells[0].SetCellValue(lane.Cells[0].PossibleValues.Max());
             }
             else if (clue == size)
             {
