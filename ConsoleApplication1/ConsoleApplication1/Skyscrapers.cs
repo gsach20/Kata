@@ -16,7 +16,7 @@ namespace ConsoleApplication1
         {
             public int X;
             public int Y;
-            public readonly List<int> PossibleValues = new List<int>(Enumerable.Range(0,Size));
+            public readonly List<int> PossibleValues = new List<int>(Enumerable.Range(1,Size));
             public int ValueSet;
 
             public Cell(int x, int y)
@@ -189,7 +189,7 @@ namespace ConsoleApplication1
 
             public override string ToString()
             {
-                return Clue+","+Size;
+                return Clue + "," + Cells.Count;
             }
         }
 
@@ -252,59 +252,9 @@ namespace ConsoleApplication1
             return grid;
         }
 
-        //private static void EliminateValues(int[] clues, int[][][] gridValues)
-        //{
-        //    for (int rowIndex = 0; rowIndex < 4; rowIndex++)
-        //    {
-        //        for (int i = 0; i < Size; i++)
-        //        {
-        //            int uniqueIndex = -1;
-        //            for (int colIndex = 0; colIndex < Size; colIndex++)
-        //            {
-        //                if (gridValues[rowIndex][colIndex][i] != 0)
-        //                {
-        //                    if (uniqueIndex != -1)
-        //                    {
-        //                        uniqueIndex = -1;
-        //                        break;
-        //                    }
-
-        //                    uniqueIndex = colIndex;
-        //                }
-        //            }
-
-        //            if (uniqueIndex != -1) SetCellValue(i + 1, new[] {rowIndex, uniqueIndex}, gridValues);
-        //        }
-        //    }
-
-        //    for (int colIndex = 0; colIndex < 4; colIndex++)
-        //    {
-        //        for (int i = 0; i < Size; i++)
-        //        {
-        //            int uniqueIndex = -1;
-        //            for (int rowIndex = 0; rowIndex < Size; rowIndex++)
-        //            {
-        //                if (gridValues[rowIndex][colIndex][i] != 0)
-        //                {
-        //                    if (uniqueIndex != -1)
-        //                    {
-        //                        uniqueIndex = -1;
-        //                        break;
-        //                    }
-
-        //                    uniqueIndex = rowIndex;
-        //                }
-        //            }
-
-        //            if (uniqueIndex != -1) SetCellValue(i + 1, new[] {uniqueIndex, colIndex}, gridValues);
-        //        }
-        //    }
-
-        //}
-
         public static string PrintValues()
         {
-            Stack<Lane> orderedClues = new Stack<Lane>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+            Stack<Lane> orderedClues = new Stack<Lane>(Enumerable.Range(0, 4 * Size)
                 .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex)))
                 .OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => LanesList[t.Item1]).Reverse());
@@ -315,9 +265,9 @@ namespace ConsoleApplication1
                                                     Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
                                                 Environment.NewLine
                                                 + string.Join(Environment.NewLine,
-                                                    Skyscrapers.AllCells.Select(r =>
+                                                    AllCells.Select(r =>
                                                         orderedClues.Pop() + " |" +
-                                                        string.Join("|", r.Select(c => string.Join(",", c)+ string.Concat(Enumerable.Range(0,Size-c.PossibleValues.Count).Select(i => "  ")))) + "| " +
+                                                        string.Join("|", r.Select(c => string.Join(",", c.PossibleValues)+ string.Concat(Enumerable.Range(0,Size-c.PossibleValues.Count).Select(i => "  ")))) + "| " +
                                                         orderedClues.Pop())) + Environment.NewLine
                                                 + "      " +
                                                 string.Join("      ",
