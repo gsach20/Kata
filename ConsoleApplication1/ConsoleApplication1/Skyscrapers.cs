@@ -95,20 +95,17 @@ namespace ConsoleApplication1
 
                     if(lane.Clue == 0) continue;
 
-                    //GetCellPositionInLane(lane, this);
+                    if(this != lane.Cells.Last()) continue;
                 
-                    if(value != lane.Cells.Count) continue;
-
-               
                     int oldSize = lane.Cells.Count;
                     int newSize = oldSize;
                     for (; newSize > 0; newSize--)
                     {
                         if (lane.Cells[newSize-1].ValueSet == 0) break;
                     }
-                    if (newSize == oldSize) continue;
-
-                
+                    
+                    if(!lane.Cells.Where((c, i) => i > newSize-1 && c.ValueSet == oldSize).Any()) return;
+                    
                 
                     int numberOfVisible = 1;
                     int highestBuildingSize = lane.Cells[newSize].ValueSet;
@@ -310,7 +307,7 @@ namespace ConsoleApplication1
                 {
                     for (int i = 0; i < clue + value - size - 1; i++)
                     {
-                        lane.Cells[i].RemoveValue(value);
+                        lane.Cells.ElementAtOrDefault(i)?.RemoveValue(value);
                     }
                 }
             }
@@ -373,7 +370,7 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                ErrorMessage(expected, orderedClues)
+                ErrorMessage(expected, actual, orderedClues)
             );
         }
 
@@ -398,7 +395,7 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                ErrorMessage(expected, orderedClues)
+                ErrorMessage(expected, actual, orderedClues)
             );
         }
 
@@ -424,7 +421,7 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                ErrorMessage(expected, orderedClues)
+                ErrorMessage(expected, actual, orderedClues)
             );
         }
 
@@ -450,7 +447,7 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                ErrorMessage(expected, orderedClues)
+                ErrorMessage(expected, actual, orderedClues)
             );
         }
 
@@ -476,11 +473,37 @@ namespace ConsoleApplication1
 
             var actual = Skyscrapers.SolvePuzzle(clues);
             CollectionAssert.AreEqual(expected, actual,
-                ErrorMessage(expected, orderedClues)
+                ErrorMessage(expected, actual, orderedClues)
             );
         }
 
-        private static string ErrorMessage(int[][] expected, Stack<int> orderedClues)
+        [Test]
+        public void SolveSkyscrapers6()
+        {
+            var clues = new[]{ 
+                2, 2, 3, 1,  
+                1, 2, 2, 3,  
+                3, 2, 1, 3,
+                2, 2, 1, 3};
+
+            var expected = new []{ 
+                new []{ 2, 3, 1, 4}, 
+                new []{ 4, 1, 2, 3}, 
+                new []{ 3, 2, 4, 1}, 
+                new []{ 1, 4, 3, 2}};
+
+
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues);
+            CollectionAssert.AreEqual(expected, actual,
+                ErrorMessage(expected, actual, orderedClues)
+            );
+        }
+
+        private static string ErrorMessage(int[][] expected, int [][] actual, Stack<int> orderedClues)
         {
             return Environment.NewLine
                    + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
@@ -488,7 +511,23 @@ namespace ConsoleApplication1
                    + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
                    + string.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.PossibleValues.Count==1 ? c.PossibleValues.FirstOrDefault(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
                    + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
-                   + Environment.NewLine + Skyscrapers.PrintValues();
+                   + Environment.NewLine + Skyscrapers.PrintValues()
+                   + Environment.NewLine + "Difference index: " + DifferenceIndex(expected, actual)
+                   + Environment.NewLine ;
+
+        }
+
+        private static string DifferenceIndex(int[][] expected, int[][] actual)
+        {
+            for (int i = 0; i < Skyscrapers.Size; i++)
+            {
+                for (int j = 0; j < Size; j++)
+                {
+                    if (expected[i][j] != actual[i][j]) return i + "," + j;
+                }
+            }
+
+            return string.Empty;
         }
     }
 
