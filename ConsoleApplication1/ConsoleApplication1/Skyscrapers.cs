@@ -191,6 +191,12 @@ namespace ConsoleApplication1
             {
                 return Clue + "," + Cells.Count;
             }
+
+            public string FirstIndices()
+            {
+                if (Cells.Any()) return Cells.First().X + "," + Cells.First().Y;
+                return "S00";
+            }
         }
 
         private static Lane[] LanesList;
@@ -224,8 +230,8 @@ namespace ConsoleApplication1
                 {
                     ProcessClues(lane);
 
-                    Debug.WriteLine("Lane first indices: " + string.Join(",", lane.Cells.FirstOrDefault()));
-                    Console.WriteLine("Lane first indices: " + string.Join(",", lane.Cells.FirstOrDefault()));
+                    Debug.WriteLine(Environment.NewLine+"Lane first indices: " + lane.FirstIndices());
+                    Console.WriteLine(Environment.NewLine+"Lane first indices: " + lane.FirstIndices());
                     
                     PrintValues();
                 }
@@ -259,7 +265,7 @@ namespace ConsoleApplication1
                 .OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => LanesList[t.Item1]).Reverse());
 
-            string values = Environment.NewLine + Environment.NewLine
+            string values = Environment.NewLine
                                                 + "      " +
                                                 string.Join("      ",
                                                     Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) +
@@ -291,7 +297,7 @@ namespace ConsoleApplication1
             {
                 for (int i = 0; i < size; i++)
                 {
-                    lane.Cells[i].SetCellValue(i+1);
+                    lane.Cells.ElementAtOrDefault(i)?.SetCellValue(i+1);
                 }
             }
             else
