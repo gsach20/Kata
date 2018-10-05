@@ -101,7 +101,7 @@ namespace ConsoleApplication1
                 {
                     Lane lane = _lanesList[laneIndex];
 
-                    if (lane.Clue == 0) continue;
+                    if (lane.Clue == 0 || !lane.Cells.Any()) continue;
 
                     if (this != lane.Cells.Last()) continue;
 
@@ -112,22 +112,22 @@ namespace ConsoleApplication1
                         if (lane.Cells[newSize - 1]._valueSet == 0) break;
                     }
 
-                    if (!lane.Cells.Where((c, i) => i > newSize - 1 && c._valueSet == oldSize).Any()) continue;
-
-
-                    int numberOfVisible = 1;
-                    int highestBuildingSize = lane.Cells[newSize]._valueSet;
-                    for (int j = newSize + 1; j < oldSize; j++)
+                    if(lane.Cells[newSize]._valueSet >= lane.HighestPossibleValue())
                     {
-                        int currBuildingSize = lane.Cells[j]._valueSet;
-                        if (currBuildingSize > highestBuildingSize)
+                        int numberOfVisible = 1;
+                        int highestBuildingSize = lane.Cells[newSize]._valueSet;
+                        for (int j = newSize + 1; j < oldSize; j++)
                         {
-                            numberOfVisible++;
-                            highestBuildingSize = currBuildingSize;
+                            int currBuildingSize = lane.Cells[j]._valueSet;
+                            if (currBuildingSize > highestBuildingSize)
+                            {
+                                numberOfVisible++;
+                                highestBuildingSize = currBuildingSize;
+                            }
                         }
-                    }
 
-                    lane.Clue = lane.Clue > numberOfVisible ? lane.Clue - numberOfVisible : 0;
+                        lane.Clue = lane.Clue > numberOfVisible ? lane.Clue - numberOfVisible : 0;
+                    }
 
                     lane.Cells.RemoveRange(newSize, oldSize - newSize);
                 }
@@ -189,6 +189,11 @@ namespace ConsoleApplication1
             {
                 if (Cells.Any()) return Cells.First().X + "," + Cells.First().Y;
                 return "S00";
+            }
+
+            public int HighestPossibleValue()
+            {
+                return Cells.Select(c => c.PossibleValues.Max()).Max();
             }
         }
 
@@ -507,7 +512,7 @@ namespace ConsoleApplication1
                    + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
                    + Environment.NewLine + Environment.NewLine
                    + "   " + string.Join(" ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
-                   + string.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.PossibleValues.Count == 1 ? c.PossibleValues.FirstOrDefault(v => v != 0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
+                   + string.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.PossibleValues.Count == 1  ? c.PossibleValues.First() == expected[c.X][c.Y] ? c.PossibleValues.First() + " " : c.PossibleValues.First() + "*" : " *")) + "| " + orderedClues.Pop())) + Environment.NewLine
                    + "   " + string.Join(" ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
                    + Environment.NewLine + Skyscrapers.PrintValues()
                    + Environment.NewLine + "Difference index: " + DifferenceIndex(expected, actual)
