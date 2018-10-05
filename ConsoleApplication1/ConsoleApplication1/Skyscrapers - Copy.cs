@@ -1,302 +1,466 @@
 ﻿//using System;
 //using System.Collections.Generic;
-//using System.Globalization;
+//using System.Diagnostics;
 //using System.Linq;
-//using Castle.Components.DictionaryAdapter;
-//using Castle.Core.Internal;
 //using NUnit.Framework;
 
 //namespace ConsoleApplication1
 //{
+//    //without print statements
 //    class Skyscrapers
 //    {
+//        public const int Size = 4;
+
+//        public static Cell[][] AllCells;
+        
+//        internal class Cell
+//        {
+//            public int X;
+//            public int Y;
+//            public readonly List<int> PossibleValues = new List<int>(Enumerable.Range(1,Size));
+//            private int _valueSet;
+
+//            public Cell(int x, int y)
+//            {
+//                X = x;
+//                Y = y;
+//            }
+
+//            public void RemoveValue(int value)
+//            {
+//                if(!PossibleValues.Remove(value)) return;
+
+//                if (PossibleValues.Count == 1)
+//                {
+//                    SetCellValue(PossibleValues.First());
+//                }
+
+//                EliminateValuesSingle(value);
+//            }
+
+//            private void EliminateValuesSingle(int value)
+//            {
+//                //Iterate over column and find if this value is present only in one cell then set value for that cell.
+//                Cell uniqueCell = null;
+//                for (int x = 0, y= Y; x < Size; x++)
+//                {
+//                    Cell currCell = AllCells[x][y];
+//                    if (currCell.PossibleValues.Contains(value))
+//                    {
+//                        if (uniqueCell != null)
+//                        {
+//                            uniqueCell = null;
+//                            break;
+//                        }
+
+//                        uniqueCell = currCell;
+//                    }
+//                }
+//                uniqueCell?.SetCellValue(value);
+
+//                //Iterate over rows
+//                uniqueCell = null;
+//                for (int x = X, y= 0; y < Size; y++)
+//                {
+//                    Cell currCell = AllCells[x][y];
+//                    if (currCell.PossibleValues.Contains(value))
+//                    {
+//                        if (uniqueCell != null)
+//                        {
+//                            uniqueCell = null;
+//                            break;
+//                        }
+
+//                        uniqueCell = currCell;
+//                    }
+//                }
+//                uniqueCell?.SetCellValue(value);
+//            }
+
+
+//            public void SetCellValue(int value)
+//            {
+//                if(_valueSet != 0) return;
+//                _valueSet = value;
+
+//                for (var i = 0; i < 4; i++)
+//                {
+//                    if (i == value - 1) continue;
+//                    RemoveValue(i+1);
+//                }
+
+//                foreach (int laneIndex in GetLanesContainingCell(this))
+//                {
+//                    Lane lane = _allLanes[laneIndex];
+
+//                    if(lane.Clue == 0) continue;
+
+//                    if(this != lane.Cells.Last()) continue;
+                
+//                    int oldSize = lane.Cells.Count;
+//                    int newSize = oldSize;
+//                    for (; newSize > 0; newSize--)
+//                    {
+//                        if (lane.Cells[newSize-1]._valueSet == 0) break;
+//                    }
+                    
+//                    if(!lane.Cells.Where((c, i) => i > newSize-1 && c._valueSet == oldSize).Any()) return;
+                    
+                
+//                    int numberOfVisible = 1;
+//                    int highestBuildingSize = lane.Cells[newSize]._valueSet;
+//                    for (int j = newSize+1; j < oldSize; j++)
+//                    {
+//                        int currBuildingSize = lane.Cells[j]._valueSet;
+//                        if (currBuildingSize > highestBuildingSize)
+//                        {
+//                            numberOfVisible++;
+//                            highestBuildingSize = currBuildingSize;
+//                        }
+//                    }
+
+//                    lane.Clue = lane.Clue > numberOfVisible ? lane.Clue - numberOfVisible : 0;
+
+//                    lane.Cells.RemoveRange(newSize, oldSize-newSize);
+//                }
+
+
+//                for (int i = 0; i < 4; i++)
+//                {
+//                    if (i == Y) continue;
+//                    GetCell(X, i).RemoveValue(value);
+//                }
+//                for (int i = 0; i < 4; i++)
+//                {
+//                    if (i == X) continue;
+//                    GetCell(i, Y).RemoveValue(value);
+//                }
+//            }
+//        }
+
+//        private class Lane
+//        {
+//            public int Clue;
+//            public readonly List<Cell> Cells;
+
+//            public Lane(int clue, int index)
+//            {
+//                Clue = clue;
+//                Cells = GetLaneCells(index);
+//            }
+
+//            private static List<Cell> GetLaneCells(int index)
+//            {
+//                List<Cell> laneCells = new List<Cell>(Size);
+//                if (index < Size)
+//                {
+//                    for (var i = 0; i < Size; i++)
+//                    {
+//                        laneCells.Add( GetCell(i, index ) );
+//                    }
+//                }
+//                else if (index < 2 * Size)
+//                {
+//                    for (var i = 0; i < Size; i++)
+//                    {
+//                        laneCells.Add( GetCell( index - Size, Size - i - 1 ) );
+//                    }
+//                }
+//                else if (index < 3 * Size)
+//                {
+//                    for (var i = 0; i < Size; i++)
+//                    {
+//                        laneCells.Add( GetCell( Size - i - 1, 3 * Size - index - 1 ) );
+//                    }
+//                }
+//                else
+//                {
+//                    for (var i = 0; i < Size; i++)
+//                    {
+//                        laneCells.Add( GetCell( 4 * Size - index - 1, i ) );
+//                    }
+//                }
+
+//                return laneCells;
+//            }
+//        }
+
+//        private static Lane[] _allLanes;
+
 //        public static int[][] SolvePuzzle(int[] clues)
 //        {
-//            int[][][] gridValues = new int[4][][];
-//            for (var i = 0; i < gridValues.Length; i++)
+//            AllCells = new Cell[Size][];
+
+//            for (var i = 0; i < Size; i++)
 //            {
-//                gridValues[i] = new int[4][];
-//                for (var j = 0; j < gridValues[i].Length; j++)
+//                AllCells[i] = new Cell[Size];
+//                for (var j = 0; j < Size; j++)
 //                {
-//                    gridValues[i][j] = new[] { 1, 2, 3, 4 };
+//                    AllCells[i][j] = new Cell(i,j);
 //                }
 //            }
 
+//            _allLanes = new Lane[4*Size];
+
 //            for (var i = 0; i < clues.Length; i++)
 //            {
-//                if (clues[i] == 0) continue;
-//                EliminateNumbers(clues[i], GetRowGridMapping(i, gridValues));
+//                _allLanes[i] = new Lane(clues[i], i);
 //            }
 
+//            for (int i = 0; i < 10; i++)
+//            {
+//                //Process clues
+//                foreach (Lane lane in _allLanes)
+//                {
+//                    ProcessClues(lane);
+//                }
 
-//            int[][] grid = new int[4][];
+//                if(AllCells.Count(r => r.Count(c => c.PossibleValues.Count != 1) != 0) == 0) break;
+//            }
+
+//            int [][] grid = new int[4][];
 //            for (var rowIndex = 0; rowIndex < 4; rowIndex++)
 //            {
 //                grid[rowIndex] = new int[4];
 //                for (var colIndex = 0; colIndex < 4; colIndex++)
 //                {
-//                    grid[rowIndex][colIndex] = gridValues[rowIndex][colIndex].Aggregate((a, b) => a + b);
+//                    grid[rowIndex][colIndex] = AllCells[rowIndex][colIndex].PossibleValues.Aggregate((a, b) => a + b);
 //                }
 //            }
+
 //            return grid;
 //        }
 
-//        private static void EliminateNumbers(int clue, int[][] lane)
+//        private static bool ProcessClues(Lane lane)
 //        {
+//            int clue = lane.Clue;
+//            int size = lane.Cells.Count;
+//            if (clue == 0) return false;
 //            if (clue == 1)
 //            {
-//                SetCellValue(4, lane[0]);
-//                RemoveFromCell(4, lane[1]);
-//                RemoveFromCell(4, lane[2]);
-//                RemoveFromCell(4, lane[3]);
+//                lane.Cells[0].SetCellValue(lane.Cells[0].PossibleValues.Max());
 //            }
-//            if (clue == 2)
+//            else if (clue == size)
 //            {
-//                RemoveFromCell(4, lane[0]);
-//            }
-//            if (clue == 3)
-//            {
-//                RemoveFromCell(3, lane[0]);
-//                RemoveFromCell(4, lane[0]);
-//                RemoveFromCell(4, lane[1]);
-//            }
-//            if (clue == 4)
-//            {
-//                SetCellValue(1, lane[0]);
-//                SetCellValue(2, lane[1]);
-//                SetCellValue(3, lane[2]);
-//                SetCellValue(4, lane[3]);
-//            }
-//        }
-
-//        private static void SetCellValue(int value, int[] cellValues)
-//        {
-//            for (var i = 0; i < cellValues.Length; i++)
-//            {
-//                if (i == value - 1) continue;
-//                cellValues[i] = 0;
-//            }
-//        }
-
-//        private static void RemoveFromCell(int value, int[] cellValues)
-//        {
-//            cellValues[value - 1] = 0;
-//        }
-
-//        private static int[][] GetRowGridMapping(int clueIndex, int[][][] gridValues)
-//        {
-//            int[][] lane = new int[4][];
-
-//            if (clueIndex < 4)
-//            {
-//                lane[0] = gridValues[0][clueIndex];
-//                lane[1] = gridValues[1][clueIndex];
-//                lane[2] = gridValues[2][clueIndex];
-//                lane[3] = gridValues[3][clueIndex];
-//            }
-//            else if (clueIndex < 8)
-//            {
-//                lane[0] = gridValues[clueIndex - 4][3];
-//                lane[1] = gridValues[clueIndex - 4][2];
-//                lane[2] = gridValues[clueIndex - 4][1];
-//                lane[3] = gridValues[clueIndex - 4][0];
-//            }
-//            else if (clueIndex < 12)
-//            {
-//                lane[0] = gridValues[3][-(clueIndex - 11)];
-//                lane[1] = gridValues[2][-(clueIndex - 11)];
-//                lane[2] = gridValues[1][-(clueIndex - 11)];
-//                lane[3] = gridValues[0][-(clueIndex - 11)];
-//            }
-//            else
-//            {
-//                lane[0] = gridValues[-(clueIndex - 15)][0];
-//                lane[1] = gridValues[-(clueIndex - 15)][1];
-//                lane[2] = gridValues[-(clueIndex - 15)][2];
-//                lane[3] = gridValues[-(clueIndex - 15)][3];
-//            }
-
-//            return lane;
-//        }
-//    }
-
-//    class Skyscrapers1
-//    {
-//        private const int Size = 4;
-//        public static int[][] SolvePuzzle(int[] clues)
-//        {
-//            int allValues = Convert.ToInt32("1111", 2);
-//            int[][] gridValues = new int[Size][];
-//            for (var rowIndex = 0; rowIndex < Size; rowIndex++)
-//            {
-//                gridValues[rowIndex] = new[] { allValues, allValues, allValues, allValues };
-//            }
-
-//            for (var i = 0; i < clues.Length; i++)
-//            {
-//                if (clues[i] == 0) continue;
-//                EliminateNumbers(clues[i], GetLaneIndices(i), gridValues);
-//            }
-
-//            //2nd Iteration
-//            for (int rowIndex = 0; rowIndex < 4; rowIndex++)
-//            {
-
-//            }
-
-
-
-//            int[][] grid = new int[4][];
-//            for (var rowIndex = 0; rowIndex < 4; rowIndex++)
-//            {
-//                grid[rowIndex] = new int[4];
-//                for (var colIndex = 0; colIndex < 4; colIndex++)
+//                for (int i = 0; i < size; i++)
 //                {
-//                    grid[rowIndex][colIndex] = gridValues[rowIndex][colIndex].Aggregate((a, b) => a + b);
-//                }
-//            }
-//            return grid;
-//        }
-
-//        private static void EliminateNumbers(int clue, int[][] laneIndices, int[][] gridValues)
-//        {
-//            if (clue == 1)
-//            {
-//                SetCellValue(4, laneIndices[0], gridValues);
-//            }
-//            if (clue == 2)
-//            {
-//                RemoveFromCell(4, laneIndices[0], gridValues);
-//            }
-//            if (clue == 3)
-//            {
-//                RemoveFromCell(3, laneIndices[0], gridValues);
-//                RemoveFromCell(4, laneIndices[0], gridValues);
-//                RemoveFromCell(4, laneIndices[1], gridValues);
-//            }
-//            if (clue == 4)
-//            {
-//                SetCellValue(1, laneIndices[0], gridValues);
-//                SetCellValue(2, laneIndices[1], gridValues);
-//                SetCellValue(3, laneIndices[2], gridValues);
-//                SetCellValue(4, laneIndices[3], gridValues);
-//            }
-//        }
-
-//        private static void SetCellValue(int value, int[] cellIndices, int[][] gridValues)
-//        {
-//            SetCell(cellIndices, gridValues, GetBinary(value));
-
-//            for (int i = 0; i < 4; i++)
-//            {
-//                if (i == cellIndices[1]) continue;
-//                RemoveFromCell(value, new[] { cellIndices[0], i }, gridValues);
-//            }
-//            for (int i = 0; i < 4; i++)
-//            {
-//                if (i == cellIndices[0]) continue;
-//                RemoveFromCell(value, new[] { i, cellIndices[1] }, gridValues);
-//            }
-//        }
-
-//        private static void SetCell(int[] cellIndices, int[][] gridValues, int cellValues)
-//        {
-//            gridValues[cellIndices[0]][cellIndices[1]] = cellValues;
-//        }
-
-//        private static int GetBinary(int value)
-//        {
-//            char[] binaryString = new[] { '0', '0', '0', '0' };
-//            binaryString[value-1] = '1';
-//            return Convert.ToInt32(string.Concat(binaryString), 2);
-//        }
-
-//        private static ref int GetCell(int[] cellIndices, int[][] gridValues)
-//        {
-//            return ref gridValues[cellIndices[0]][cellIndices[1]];
-//        }
-
-//        private static void RemoveFromCell(int value, int[] cellIndices, int[][] gridValues)
-//        {
-//            GetCell(cellIndices, gridValues)[value - 1] = 0;
-//        }
-
-//        private static int[][] GetLaneIndices(int clueIndex)
-//        {
-//            int[][] laneIndices = new int[4][];
-
-//            if (clueIndex < 4)
-//            {
-//                for (int i = 0; i < 4; i++)
-//                {
-//                    laneIndices[i] = new[] { i, clueIndex };
-//                }
-//            }
-//            else if (clueIndex < 8)
-//            {
-//                for (int i = 0; i < 4; i++)
-//                {
-//                    laneIndices[i] = new[] { clueIndex - 4, 3 - i };
-//                }
-//            }
-//            else if (clueIndex < 12)
-//            {
-//                for (int i = 0; i < 4; i++)
-//                {
-//                    laneIndices[i] = new[] { 3 - i, -(clueIndex - 11) };
+//                    lane.Cells.ElementAtOrDefault(i)?.SetCellValue(i+1);
 //                }
 //            }
 //            else
 //            {
-//                for (int i = 0; i < 4; i++)
+//                if (clue == 2 && size > 1)
 //                {
-//                    laneIndices[i] = new[] { -(clueIndex - 15), i };
+//                    lane.Cells[1].RemoveValue(size-1);
+//                }
+//                for (int value = size; value > size - clue + 1; value--)
+//                {
+//                    for (int i = 0; i < clue + value - size - 1; i++)
+//                    {
+//                        lane.Cells.ElementAtOrDefault(i)?.RemoveValue(value);
+//                    }
 //                }
 //            }
 
-//            return laneIndices;
+//            return true;
 //        }
+
+//        private static int[] GetLanesContainingCell(Cell cell)
+//        {
+//            return new [] {cell.Y, cell.X + Size, 3*Size - cell.Y -1, 4*Size - cell.X - 1};
+//        }
+
+//        private static Cell GetCell(int x, int y)
+//        {
+//            return AllCells[x][y];
+//        }       
 //    }
 
 //    [TestFixture]
 //    public class SkyscrapersTests
 //    {
+//        private const int Size = Skyscrapers.Size;
+        
+
+
 //        [Test]
 //        public void SolveSkyscrapers1()
 //        {
-//            var clues = new[]{ 2, 2, 1, 3,
-//                2, 2, 3, 1,
-//                1, 2, 2, 3,
+//            var clues = new[]{ 
+//                2, 2, 1, 3, 
+//                2, 2, 3, 1, 
+//                1, 2, 2, 3, 
 //                3, 2, 1, 3};
-
-//            var expected = new[]{ new []{1, 3, 4, 2},
-//                new []{4, 2, 1, 3},
+                           
+//            var expected = new []{ new []{1, 3, 4, 2},       
+//                new []{4, 2, 1, 3},       
 //                new []{3, 4, 2, 1},
 //                new []{2, 1, 3, 4 }};
 
-//            var actual = Skyscrapers1.SolvePuzzle(clues);
+//            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+//                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+//                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+//            var actual = Skyscrapers.SolvePuzzle(clues);
 //            CollectionAssert.AreEqual(expected, actual,
-//                string.Concat(
-//                    string.Concat(expected.Select(r => string.Concat(r.Select(c => c.ToString() + " ")) + Environment.NewLine + "  ")),
-//                    Environment.NewLine + "  ",
-//                    string.Concat(actual.Select(r => string.Concat(r.Select(c => c.ToString() + " ")) + Environment.NewLine + "  "))));
+//                ErrorMessage(expected, actual, orderedClues)
+//            );
 //        }
 
 //        [Test]
 //        public void SolveSkyscrapers2()
 //        {
-//            var clues = new[]{ 0, 0, 1, 2,
-//                0, 2, 0, 0,
+//            var clues = new[]{ 
+//                0, 0, 1, 2,  
+//                0, 2, 0, 0,  
 //                0, 3, 0, 0,
 //                0, 1, 0, 0};
 
-//            var expected = new[]{ new []{2, 1, 4, 3},
-//                new []{3, 4, 1, 2},
-//                new []{4, 2, 3, 1},
+//            var expected = new []{ new []{2, 1, 4, 3}, 
+//                new []{3, 4, 1, 2}, 
+//                new []{4, 2, 3, 1}, 
 //                new []{1, 3, 2, 4}};
 
-//            var actual = Skyscrapers1.SolvePuzzle(clues);
-//            CollectionAssert.AreEqual(expected, actual);
+
+//            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+//                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+//                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+//            var actual = Skyscrapers.SolvePuzzle(clues);
+//            CollectionAssert.AreEqual(expected, actual,
+//                ErrorMessage(expected, actual, orderedClues)
+//            );
+//        }
+
+//        [Test]
+//        public void SolveSkyscrapers3()
+//        {
+//            var clues = new[]{ 
+//                1, 2, 4, 2,  
+//                2, 1, 3, 2,  
+//                3, 1, 2, 3,
+//                3, 2, 2, 1};
+
+//            var expected = new []{ 
+//                new []{ 4, 2, 1, 3}, 
+//                new []{ 3, 1, 2, 4}, 
+//                new []{ 1, 4, 3, 2}, 
+//                new []{ 2, 3, 4, 1}};
+
+
+//            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+//                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+//                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+//            var actual = Skyscrapers.SolvePuzzle(clues);
+//            CollectionAssert.AreEqual(expected, actual,
+//                ErrorMessage(expected, actual, orderedClues)
+//            );
+//        }
+
+//        [Test]
+//        public void SolveSkyscrapers4()
+//        {
+//            var clues = new[]{ 
+//                2, 2, 1, 3,  
+//                2, 2, 3, 1,  
+//                1, 2, 2, 3,
+//                3, 2, 1, 3};
+
+//            var expected = new []{ 
+//                new []{ 1, 3, 4, 2}, 
+//                new []{ 4, 2, 1, 3}, 
+//                new []{ 3, 4, 2, 1}, 
+//                new []{ 2, 1, 3, 4}};
+
+
+//            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+//                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+//                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+//            var actual = Skyscrapers.SolvePuzzle(clues);
+//            CollectionAssert.AreEqual(expected, actual,
+//                ErrorMessage(expected, actual, orderedClues)
+//            );
+//        }
+
+//        [Test]
+//        public void SolveSkyscrapers5()
+//        {
+//            var clues = new[]{ 
+//                0, 2, 0, 0,  
+//                0, 3, 0, 0,  
+//                0, 1, 0, 0,
+//                0, 0, 1, 2};
+
+//            var expected = new []{ 
+//                new []{ 3, 2, 1, 4}, 
+//                new []{ 4, 1, 3, 2}, 
+//                new []{ 1, 4, 2, 3}, 
+//                new []{ 2, 3, 4, 1}};
+
+
+//            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+//                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+//                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+//            var actual = Skyscrapers.SolvePuzzle(clues);
+//            CollectionAssert.AreEqual(expected, actual,
+//                ErrorMessage(expected, actual, orderedClues)
+//            );
+//        }
+
+//        [Test]
+//        public void SolveSkyscrapers6()
+//        {
+//            var clues = new[]{ 
+//                2, 2, 3, 1,  
+//                1, 2, 2, 3,  
+//                3, 2, 1, 3,
+//                2, 2, 1, 3};
+
+//            var expected = new []{ 
+//                new []{ 2, 3, 1, 4}, 
+//                new []{ 4, 1, 2, 3}, 
+//                new []{ 3, 2, 4, 1}, 
+//                new []{ 1, 4, 3, 2}};
+
+
+//            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+//                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+//                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
+//            var actual = Skyscrapers.SolvePuzzle(clues);
+//            CollectionAssert.AreEqual(expected, actual,
+//                ErrorMessage(expected, actual, orderedClues)
+//            );
+//        }
+
+//        private static string ErrorMessage(int[][] expected, int [][] actual, Stack<int> orderedClues)
+//        {
+//            return Environment.NewLine
+//                   + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
+//                   + Environment.NewLine + Environment.NewLine
+//                   + "   "+  string.Join(" " , Enumerable.Range(0,4).Select(i=> orderedClues.Pop())) + Environment.NewLine
+//                   + string.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.PossibleValues.Count==1 ? c.PossibleValues.FirstOrDefault(v=>v!=0).ToString() : " ")) + "| " + orderedClues.Pop())) + Environment.NewLine
+//                   + "   " + string.Join(" ", Enumerable.Range(0, 4).Select(i => orderedClues.Pop())) + Environment.NewLine
+//                   + Environment.NewLine + Skyscrapers.PrintValues()
+//                   + Environment.NewLine + "Difference index: " + DifferenceIndex(expected, actual)
+//                   + Environment.NewLine ;
+
+//        }
+
+//        private static string DifferenceIndex(int[][] expected, int[][] actual)
+//        {
+//            for (int i = 0; i < Skyscrapers.Size; i++)
+//            {
+//                for (int j = 0; j < Size; j++)
+//                {
+//                    if (expected[i][j] != actual[i][j]) return i + "," + j;
+//                }
+//            }
+
+//            return string.Empty;
 //        }
 //    }
 
