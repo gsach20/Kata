@@ -195,6 +195,23 @@ namespace ConsoleApplication1
             {
                 return Cells.Select(c => c.PossibleValues.Max()).Max();
             }
+
+            public Lane GetOppositeLane()
+            {
+                if(Cells.Count < 2) throw new InvalidOperationException("Call this method only if there are more than two cells in a lane");
+                if (Cells[0].X == Cells[1].X)
+                {
+                    if(Cells[0].Y > Cells[1].Y)
+                        return _lanesList[4 * Size - Cells[0].X - 1];
+                    return _lanesList[Size + Cells[0].X];
+                }
+                else
+                {
+                    if(Cells[0].X < Cells[1].X)
+                        return _lanesList[3 * Size - Cells[0].Y - 1];
+                    return _lanesList[Cells[0].Y];
+                }
+            }
         }
 
         private static Lane[] _lanesList;
@@ -297,14 +314,37 @@ namespace ConsoleApplication1
             {
                 for (int i = 0; i < size; i++)
                 {
-                    lane.Cells.ElementAtOrDefault(i)?.SetCellValue(i + 1);
+                    Cell cell = lane.Cells.ElementAtOrDefault(i);
+                    cell?.SetCellValue(cell.PossibleValues.Min());
                 }
             }
             else
             {
                 if (clue == 2 && size > 1)
                 {
-                    lane.Cells[1].RemoveValue(size - 1);
+                    bool valueToBeRemoved = true;
+                    Lane oppositeLane = lane.GetOppositeLane();
+                    if (size == Size && oppositeLane.Clue == 2 && oppositeLane.Cells.Count == size)
+                    {
+                        if (!lane.Cells[0].PossibleValues.Contains(Size-1))
+                        {
+                            oppositeLane.Cells[0].SetCellValue(Size-1);
+                            valueToBeRemoved = false;
+                        }
+                        else if (!oppositeLane.Cells[0].PossibleValues.Contains(Size - 1))
+                        {
+                            lane.Cells[0].SetCellValue(Size-1);
+                            valueToBeRemoved = false;
+                        }
+                    }
+
+                    if (valueToBeRemoved)
+                    {
+                        List<int> possibleValuesInLane = lane.Cells.SelectMany(c => c.PossibleValues).Distinct().ToList();
+                        possibleValuesInLane.Sort();
+                        lane.Cells[1].RemoveValue(possibleValuesInLane[size-2]);
+
+                    }
                 }
                 for (int value = size; value > size - clue + 1; value--)
                 {
@@ -511,9 +551,9 @@ namespace ConsoleApplication1
             return Environment.NewLine
                    + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
                    + Environment.NewLine + Environment.NewLine
-                   + "   " + string.Join(" ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
+                   + "   " + string.Join("  ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
                    + string.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.PossibleValues.Count == 1  ? c.PossibleValues.First() == expected[c.X][c.Y] ? c.PossibleValues.First() + " " : c.PossibleValues.First() + "*" : " *")) + "| " + orderedClues.Pop())) + Environment.NewLine
-                   + "   " + string.Join(" ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
+                   + "   " + string.Join("  ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
                    + Environment.NewLine + Skyscrapers.PrintValues()
                    + Environment.NewLine + "Difference index: " + DifferenceIndex(expected, actual)
                    + Environment.NewLine;
