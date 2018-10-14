@@ -12,7 +12,7 @@ namespace ConsoleApplication1
 
         public static Cell[][] AllCells;
 
-        internal class Cell
+        internal class Cell : IEquatable<Cell>
         {
             public int X;
             public int Y;
@@ -26,9 +26,17 @@ namespace ConsoleApplication1
                 PossibleValues = new List<int>(Enumerable.Range(1, Size));
             }
 
-            public void RemoveValue(int value)
+            public Cell(Cell cell)
             {
-                if (!PossibleValues.Remove(value)) return;
+                X = cell.X;
+                Y = cell.Y;
+                PossibleValues = new List<int>(cell.PossibleValues);
+                _valueSet = cell._valueSet;
+            }
+
+            public bool RemoveValue(int value)
+            {
+                if (!PossibleValues.Remove(value)) return false;
 
                 if (PossibleValues.Count == 1)
                 {
@@ -36,6 +44,8 @@ namespace ConsoleApplication1
                 }
 
                 EliminateValuesSingle(value);
+
+                return true;
             }
 
             private void EliminateValuesSingle(int value)
@@ -78,13 +88,13 @@ namespace ConsoleApplication1
             }
 
 
-            public void SetCellValue(int value)
+            public bool SetCellValue(int value)
             {
-                if (_valueSet != 0) return;
+                if (_valueSet != 0) return false;
                 _valueSet = value;
 
                 List<int> toBeRemoved = PossibleValues.Where(v => v != value).ToList();
-                toBeRemoved.ForEach(RemoveValue);
+                toBeRemoved.ForEach(v => RemoveValue(v));
 
                 for (int i = 0; i < Size; i++)
                 {
@@ -130,6 +140,35 @@ namespace ConsoleApplication1
                     }
 
                     lane.Cells.RemoveRange(newSize, oldSize - newSize);
+                }
+
+                return true;
+            }
+
+            public bool Equals(Cell other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return X == other.X && Y == other.Y && PossibleValues.SequenceEqual(other.PossibleValues) && _valueSet == other._valueSet;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((Cell) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = X;
+                    hashCode = (hashCode * 397) ^ Y;
+                    hashCode = (hashCode * 397) ^ (PossibleValues != null ? PossibleValues.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ _valueSet;
+                    return hashCode;
                 }
             }
         }
@@ -238,22 +277,41 @@ namespace ConsoleApplication1
 
 
             PrintValues();
-            for (int i = 0; i < 10; i++)
+            int iterationCount = 1;
+            for (bool somethingChanged = true; somethingChanged; iterationCount++)
             {
-                //Process clues
-                //foreach (Lane lane in LanesList)
-                for (var i1 = 0; i1 < _lanesList.Length; i1++)
-                {
-                    Lane lane = _lanesList[i1];
-                    ProcessClues(lane);
+                //Cell[][] allCells = new Cell[Size][];
+                //for (var i1 = 0; i1 < Size; i1++)
+                //{
+                //    allCells[i1] = new Cell[Size];
+                //    for (var j1 = 0; j1 < Size; j1++)
+                //    {
+                //        allCells[i1][j1] = new Cell(AllCells[i1][j1]);
+                //    }
+                //}
 
+                //Process clues
+                somethingChanged = false;
+                foreach (var lane in _lanesList)
+                {
+                    somethingChanged = ProcessClues(lane) | somethingChanged;
+                    
                     Debug.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
                     Console.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
 
                     PrintValues();
                 }
 
-                if (AllCells.Count(r => r.Count(c => c.PossibleValues.Count != 1) != 0) == 0) break;
+                if(somethingChanged) continue;
+
+                foreach (Lane lane in _lanesList)
+                {
+                    somethingChanged = ApplySpecialRules(lane) | somethingChanged;
+                }
+
+                //if(Enumerable.Range(0,Size).All(x => allCells[x].SequenceEqual(AllCells[x]))) break;
+
+                //if (AllCells.Count(r => r.Count(c => c.PossibleValues.Count != 1) != 0) == 0) break;
 
                 //PrintValues();
             }
@@ -271,8 +329,53 @@ namespace ConsoleApplication1
             }
 
             PrintValues();
+            Debug.WriteLine("Number of iterations: "+iterationCount);
+            Console.WriteLine("Number of iterations: "+iterationCount);
 
             return grid;
+        }
+
+        private static bool ApplySpecialRules(Lane lane)
+        {
+            int clue = lane.Clue;
+            int size = lane.Cells.Count;
+            if (clue == 2 && size == Size)
+            {
+                Lane oppositeLane = lane.GetOppositeLane();
+                if ( oppositeLane.Clue == 2 && oppositeLane.Cells.Count == Size)
+                {
+                    if (!lane.Cells[0].PossibleValues.Contains(Size - 1))
+                    {
+                        return oppositeLane.Cells[0].SetCellValue(Size - 1);
+                    }
+
+                    if (!oppositeLane.Cells[0].PossibleValues.Contains(Size - 1))
+                    {
+                        return lane.Cells[0].SetCellValue(Size - 1);
+                    }
+                }
+            }
+
+            if (clue < 2) return false;
+
+            List<int> possibleValuesInLane = lane.Cells.SelectMany(c => c.PossibleValues).Distinct().ToList();
+            possibleValuesInLane.Sort();
+            int numberOfVisible = 0;
+            int firstPossiblePositionOfLastItem = possibleValuesInLane.Count;
+            for (var i = possibleValuesInLane.Count - 1; i >= 0; i--)
+            {
+                int lastPossiblePosition = lane.Cells.FindLastIndex(c => c.PossibleValues.Contains(possibleValuesInLane[i]));
+                if (lastPossiblePosition >= firstPossiblePositionOfLastItem) break;
+                numberOfVisible++;
+                firstPossiblePositionOfLastItem = lane.Cells.FindIndex(c => c.PossibleValues.Contains(possibleValuesInLane[i]));
+            }
+
+            if (firstPossiblePositionOfLastItem > 1 && clue - numberOfVisible == 1)
+            {
+                return lane.Cells[0].RemoveValue(possibleValuesInLane.First());
+            }
+
+            return false;
         }
 
         public static string PrintValues()
@@ -306,56 +409,40 @@ namespace ConsoleApplication1
             int clue = lane.Clue;
             int size = lane.Cells.Count;
             if (clue == 0) return false;
+            bool somethingChanged = false;
             if (clue == 1)
             {
-                lane.Cells[0].SetCellValue(lane.Cells[0].PossibleValues.Max());
+                return lane.Cells[0].SetCellValue(lane.Cells[0].PossibleValues.Max());
             }
-            else if (clue == size)
+
+            if (clue == size)
             {
                 for (int i = 0; i < size; i++)
                 {
                     Cell cell = lane.Cells.ElementAtOrDefault(i);
-                    cell?.SetCellValue(cell.PossibleValues.Min());
+                    if (cell != null) somethingChanged = cell.SetCellValue(cell.PossibleValues.Min()) | somethingChanged;
                 }
+
+                return somethingChanged;
             }
-            else
+
+            if (clue == 2 && size > 1)
             {
-                if (clue == 2 && size > 1)
-                {
-                    bool valueToBeRemoved = true;
-                    Lane oppositeLane = lane.GetOppositeLane();
-                    if (size == Size && oppositeLane.Clue == 2 && oppositeLane.Cells.Count == size)
-                    {
-                        if (!lane.Cells[0].PossibleValues.Contains(Size-1))
-                        {
-                            oppositeLane.Cells[0].SetCellValue(Size-1);
-                            valueToBeRemoved = false;
-                        }
-                        else if (!oppositeLane.Cells[0].PossibleValues.Contains(Size - 1))
-                        {
-                            lane.Cells[0].SetCellValue(Size-1);
-                            valueToBeRemoved = false;
-                        }
-                    }
+                List<int> possibleValuesInLane = lane.Cells.SelectMany(c => c.PossibleValues).Distinct().ToList();
+                possibleValuesInLane.Sort();
+                somethingChanged = lane.Cells[1].RemoveValue(possibleValuesInLane[size - 2]);
+            }
 
-                    if (valueToBeRemoved)
-                    {
-                        List<int> possibleValuesInLane = lane.Cells.SelectMany(c => c.PossibleValues).Distinct().ToList();
-                        possibleValuesInLane.Sort();
-                        lane.Cells[1].RemoveValue(possibleValuesInLane[size-2]);
-
-                    }
-                }
-                for (int value = size; value > size - clue + 1; value--)
+            for (int value = size; value > size - clue + 1; value--)
+            {
+                for (int i = 0; i < clue + value - size - 1; i++)
                 {
-                    for (int i = 0; i < clue + value - size - 1; i++)
-                    {
-                        lane.Cells.ElementAtOrDefault(i)?.RemoveValue(value);
-                    }
+                    Cell cell = lane.Cells.ElementAtOrDefault(i);
+                    if (cell != null) somethingChanged = cell.RemoveValue(value) | somethingChanged;
                 }
             }
 
-            return true;
+            return somethingChanged;
         }
 
         private static int[] GetLanesContainingCell(Cell cell)
