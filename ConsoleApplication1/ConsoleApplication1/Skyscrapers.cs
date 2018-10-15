@@ -12,12 +12,12 @@ namespace ConsoleApplication1
 
         public static Cell[][] AllCells;
 
-        internal class Cell : IEquatable<Cell>
+        internal class Cell
         {
             public int X;
             public int Y;
             public readonly List<int> PossibleValues;
-            private int _valueSet;
+            public int _valueSet;
 
             public Cell(int x, int y)
             {
@@ -111,65 +111,51 @@ namespace ConsoleApplication1
                 {
                     Lane lane = _lanesList[laneIndex];
 
-                    if (lane.Clue == 0 || !lane.Cells.Any()) continue;
+                    if (lane.Clue == 0) continue;
 
-                    if (this != lane.Cells.Last()) continue;
+                    //if (this != lane.Cells.Last()) continue;
 
-                    int oldSize = lane.Cells.Count;
-                    int newSize = oldSize;
-                    for (; newSize > 0; newSize--)
+                    for (var i = lane.Cells.Count - 1; i >= 0; i--)
                     {
-                        if (lane.Cells[newSize - 1]._valueSet == 0) break;
+                        Cell cell = lane.Cells[i];
+                        if(cell._valueSet == 0) break;
+                        lane.Cells.RemoveAt(i);
+                        if (!lane.Cells.Any()) lane.Clue = 0;
+                        else if (cell._valueSet > lane.Cells.Select(c => c.PossibleValues.Max()).Max()) lane.Clue--;
                     }
 
-                    if(lane.Cells[newSize]._valueSet >= lane.HighestPossibleValue())
-                    {
-                        int numberOfVisible = 1;
-                        int highestBuildingSize = lane.Cells[newSize]._valueSet;
-                        for (int j = newSize + 1; j < oldSize; j++)
-                        {
-                            int currBuildingSize = lane.Cells[j]._valueSet;
-                            if (currBuildingSize > highestBuildingSize)
-                            {
-                                numberOfVisible++;
-                                highestBuildingSize = currBuildingSize;
-                            }
-                        }
+                    //int oldSize = lane.Cells.Count;
+                    //int newSize = oldSize;
+                    //int numberOfVisible = 0;
+                    //for (; newSize > 0; newSize--)
+                    //{
+                    //    if (lane.Cells[newSize - 1]._valueSet == 0) break;
 
-                        lane.Clue = lane.Clue > numberOfVisible ? lane.Clue - numberOfVisible : 0;
-                    }
+                    //}
 
-                    lane.Cells.RemoveRange(newSize, oldSize - newSize);
+
+
+                    //if(lane.Cells[newSize]._valueSet >= lane.HighestPossibleValue())
+                    //{
+                    //    int numberOfVisible = 1;
+                    //    int highestBuildingSize = lane.Cells[newSize]._valueSet;
+                    //    for (int j = newSize + 1; j < oldSize; j++)
+                    //    {
+                    //        int currBuildingSize = lane.Cells[j]._valueSet;
+                    //        if (currBuildingSize > highestBuildingSize)
+                    //        {
+                    //            numberOfVisible++;
+                    //            highestBuildingSize = currBuildingSize;
+                    //        }
+                    //    }
+
+                    //    lane.Clue = lane.Clue > numberOfVisible ? lane.Clue - numberOfVisible : 0;
+                    //}
+
+                    //lane.Cells.RemoveRange(newSize, oldSize - newSize);
                 }
 
                 return true;
-            }
-
-            public bool Equals(Cell other)
-            {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
-                return X == other.X && Y == other.Y && PossibleValues.SequenceEqual(other.PossibleValues) && _valueSet == other._valueSet;
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != this.GetType()) return false;
-                return Equals((Cell) obj);
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    var hashCode = X;
-                    hashCode = (hashCode * 397) ^ Y;
-                    hashCode = (hashCode * 397) ^ (PossibleValues != null ? PossibleValues.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ _valueSet;
-                    return hashCode;
-                }
             }
         }
 
@@ -280,40 +266,34 @@ namespace ConsoleApplication1
             int iterationCount = 1;
             for (bool somethingChanged = true; somethingChanged; iterationCount++)
             {
-                //Cell[][] allCells = new Cell[Size][];
-                //for (var i1 = 0; i1 < Size; i1++)
-                //{
-                //    allCells[i1] = new Cell[Size];
-                //    for (var j1 = 0; j1 < Size; j1++)
-                //    {
-                //        allCells[i1][j1] = new Cell(AllCells[i1][j1]);
-                //    }
-                //}
-
                 //Process clues
                 somethingChanged = false;
                 foreach (var lane in _lanesList)
                 {
-                    somethingChanged = ProcessClues(lane) | somethingChanged;
-                    
-                    Debug.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
-                    Console.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
-
-                    PrintValues();
+                    somethingChanged = ApplySimpleRules(lane) | somethingChanged;
                 }
 
                 if(somethingChanged) continue;
 
                 foreach (Lane lane in _lanesList)
                 {
-                    somethingChanged = ApplySpecialRules(lane) | somethingChanged;
+                    somethingChanged = ApplyAdvancedRules(lane) | somethingChanged;
                 }
 
-                //if(Enumerable.Range(0,Size).All(x => allCells[x].SequenceEqual(AllCells[x]))) break;
+                if(somethingChanged) continue;
 
-                //if (AllCells.Count(r => r.Count(c => c.PossibleValues.Count != 1) != 0) == 0) break;
+                PrintValues();
+                for (var i = 0; i < _lanesList.Length; i++)
+                //foreach (Lane lane in _lanesList)
+                {
+                    Lane lane = _lanesList[i];
+                    somethingChanged = ApplyMoreAdvancedRules(lane) | somethingChanged;
 
-                //PrintValues();
+                    Debug.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
+                    Console.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
+
+                    PrintValues();
+                }
             }
 
             //Debug.Print(string.Join(" ", laneDetailses.Select(l => l.Clue.ToString() + "," + l.Size.ToString())));
@@ -335,7 +315,7 @@ namespace ConsoleApplication1
             return grid;
         }
 
-        private static bool ApplySpecialRules(Lane lane)
+        private static bool ApplyAdvancedRules(Lane lane)
         {
             int clue = lane.Clue;
             int size = lane.Cells.Count;
@@ -362,7 +342,8 @@ namespace ConsoleApplication1
             possibleValuesInLane.Sort();
             int numberOfVisible = 0;
             int firstPossiblePositionOfLastItem = possibleValuesInLane.Count;
-            for (var i = possibleValuesInLane.Count - 1; i >= 0; i--)
+            int i = possibleValuesInLane.Count - 1;
+            for (; i >= 0; i--)
             {
                 int lastPossiblePosition = lane.Cells.FindLastIndex(c => c.PossibleValues.Contains(possibleValuesInLane[i]));
                 if (lastPossiblePosition >= firstPossiblePositionOfLastItem) break;
@@ -370,11 +351,43 @@ namespace ConsoleApplication1
                 firstPossiblePositionOfLastItem = lane.Cells.FindIndex(c => c.PossibleValues.Contains(possibleValuesInLane[i]));
             }
 
-            if (firstPossiblePositionOfLastItem > 1 && clue - numberOfVisible == 1)
+            bool somethingChanged = false;
+            if (firstPossiblePositionOfLastItem > 1)
             {
-                return lane.Cells[0].RemoveValue(possibleValuesInLane.First());
+                if (clue - numberOfVisible == 1)
+                {
+                    somethingChanged = lane.Cells[0].RemoveValue(possibleValuesInLane.First());
+                    if (lane.Cells.Count > 1)
+                        somethingChanged = lane.Cells[1].RemoveValue(possibleValuesInLane[i]) | somethingChanged;
+                }
+                else if (firstPossiblePositionOfLastItem == clue - numberOfVisible)
+                {
+                    somethingChanged = lane.Cells[firstPossiblePositionOfLastItem - 1].RemoveValue(lane.Cells.GetRange(0, firstPossiblePositionOfLastItem).Select(c => c.PossibleValues.Min()).Min());
+                }
             }
 
+            return somethingChanged;
+        }
+
+        private static bool ApplyMoreAdvancedRules(Lane lane)
+        {
+            if (lane.Clue < 3) return false;
+
+            int numberOfVisible = 1;
+            var i = 1;
+            for (; i < lane.Cells.Count; i++)
+            {
+                if(lane.Cells[i]._valueSet == 0) break;
+                if (lane.Cells[i]._valueSet > lane.Cells.GetRange(0, i).Select(c => c.PossibleValues.Max()).Max())
+                    numberOfVisible++;
+            }
+
+            if (numberOfVisible == 1 && lane.Cells[0]._valueSet == 0) return false;
+
+            if (lane.Clue - numberOfVisible == 1)
+                return lane.Cells[i].SetCellValue(lane.Cells[i].PossibleValues.Max());
+            if(lane.Clue - numberOfVisible > 1)
+                return lane.Cells[i].RemoveValue(lane.Cells[i].PossibleValues.Max());
             return false;
         }
 
@@ -404,7 +417,7 @@ namespace ConsoleApplication1
             return values;
         }
 
-        private static bool ProcessClues(Lane lane)
+        private static bool ApplySimpleRules(Lane lane)
         {
             int clue = lane.Clue;
             int size = lane.Cells.Count;
@@ -704,8 +717,13 @@ namespace ConsoleApplication1
                              new []{ 1, 2, 5, 6, 4, 3 },
                              new []{ 3, 4, 2, 5, 1, 6 }};
 
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
             var actual = Skyscrapers.SolvePuzzle(clues);
-            CollectionAssert.AreEqual(expected, actual);
+            CollectionAssert.AreEqual(expected, actual,
+                SkyscrapersTests.ErrorMessage(expected, actual, orderedClues));
         }
 
         [Test]
@@ -723,8 +741,13 @@ namespace ConsoleApplication1
                              new []{ 4, 3, 2, 6, 1, 5 },
                              new []{ 1, 5, 4, 3, 2, 6 }};
 
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
+
             var actual = Skyscrapers.SolvePuzzle(clues);
-            CollectionAssert.AreEqual(expected, actual);
+            CollectionAssert.AreEqual(expected, actual,
+                SkyscrapersTests.ErrorMessage(expected, actual, orderedClues));
         }
     }
 
