@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
 
@@ -119,8 +118,6 @@ namespace ConsoleApplication1
 
                     if (lane.Clue == 0) continue;
 
-                    //if (this != lane.Cells.Last()) continue;
-
                     for (var i = lane.Cells.Count - 1; i >= 0; i--)
                     {
                         Cell cell = lane.Cells[i];
@@ -129,36 +126,6 @@ namespace ConsoleApplication1
                         if (!lane.Cells.Any()) lane.Clue = 0;
                         else if (cell.ValueSet > lane.Cells.Select(c => c.PossibleValues.Max()).Max()) lane.Clue--;
                     }
-
-                    //int oldSize = lane.Cells.Count;
-                    //int newSize = oldSize;
-                    //int numberOfVisible = 0;
-                    //for (; newSize > 0; newSize--)
-                    //{
-                    //    if (lane.Cells[newSize - 1]._valueSet == 0) break;
-
-                    //}
-
-
-
-                    //if(lane.Cells[newSize]._valueSet >= lane.HighestPossibleValue())
-                    //{
-                    //    int numberOfVisible = 1;
-                    //    int highestBuildingSize = lane.Cells[newSize]._valueSet;
-                    //    for (int j = newSize + 1; j < oldSize; j++)
-                    //    {
-                    //        int currBuildingSize = lane.Cells[j]._valueSet;
-                    //        if (currBuildingSize > highestBuildingSize)
-                    //        {
-                    //            numberOfVisible++;
-                    //            highestBuildingSize = currBuildingSize;
-                    //        }
-                    //    }
-
-                    //    lane.Clue = lane.Clue > numberOfVisible ? lane.Clue - numberOfVisible : 0;
-                    //}
-
-                    //lane.Cells.RemoveRange(newSize, oldSize - newSize);
                 }
 
                 return Result.Changed;
@@ -235,11 +202,6 @@ namespace ConsoleApplication1
                 return "S00";
             }
 
-            public int HighestPossibleValue()
-            {
-                return Cells.Select(c => c.PossibleValues.Max()).Max();
-            }
-
             public Lane GetOppositeLane()
             {
                 if(Cells.Count < 2) throw new InvalidOperationException("Call this method only if there are more than two cells in a lane");
@@ -260,25 +222,25 @@ namespace ConsoleApplication1
 
         private class Backup
         {
-            private readonly Cell[][] allCells;
-            private Lane[] allLanes;
+            private readonly Cell[][] _allCells;
+            private readonly Lane[] _allLanes;
 
             public Backup()
             {
-                allCells = new Cell[Size][];
+                _allCells = new Cell[Size][];
                 for (var i = 0; i < Size; i++)
                 {
-                    allCells[i] = new Cell[Size];
+                    _allCells[i] = new Cell[Size];
                     for (int j = 0; j < Size; j++)
                     {
-                        allCells[i][j] = new Cell(AllCells[i][j]);
+                        _allCells[i][j] = new Cell(AllCells[i][j]);
                     }
                 }
 
-                allLanes = new Lane[4*Size];
-                for (var i = 0; i < allLanes.Length; i++)
+                _allLanes = new Lane[4*Size];
+                for (var i = 0; i < _allLanes.Length; i++)
                 {
-                    allLanes[i] = new Lane(AllLanes[i]);
+                    _allLanes[i] = new Lane(AllLanes[i]);
                 }
             }
 
@@ -288,11 +250,11 @@ namespace ConsoleApplication1
                 {
                     for (var j = 0; j < Size; j++)
                     {
-                        AllCells[i][j].CopyFrom(allCells[i][j]);
+                        AllCells[i][j].CopyFrom(_allCells[i][j]);
                     }
                 }
 
-                AllLanes = allLanes;
+                AllLanes = _allLanes;
             }
         }
 
@@ -323,8 +285,6 @@ namespace ConsoleApplication1
                 FindChoicesAndEliminate(clues);
             }
 
-            //Debug.Print(string.Join(" ", laneDetailses.Select(l => l.Clue.ToString() + "," + l.Size.ToString())));
-
             int[][] grid = new int[Size][];
             for (var rowIndex = 0; rowIndex < Size; rowIndex++)
             {
@@ -334,10 +294,6 @@ namespace ConsoleApplication1
                     grid[rowIndex][colIndex] = AllCells[rowIndex][colIndex].PossibleValues.Aggregate((a, b) => a + b);
                 }
             }
-
-            Console.WriteLine(string.Join(" ", clues));
-
-            //PrintValues();
 
             return grid;
         }
@@ -353,21 +309,7 @@ namespace ConsoleApplication1
                     continue;
                 }
 
-                //PrintValues();
-
-                bool puzzleSolved = PuzzleSolved();
-
-                //if (!puzzleSolved)
-                //{
-                //    if (Result.Failed == (ProcessClues() & Result.Failed))
-                //    {
-                //        backup.Restore();
-                //        continue;
-                //    }
-                //    puzzleSolved = PuzzleSolved();
-                //}
-
-                if (puzzleSolved)
+                if (PuzzleSolved())
                 {
                     if (ValidateClues(clues))
                     {
@@ -437,8 +379,7 @@ namespace ConsoleApplication1
         private static Result ProcessClues()
         {
             Result result = Result.Changed;
-            int iterationCount = 1;
-            for (; result == Result.Changed; iterationCount++)
+            while (result == Result.Changed)
             {
                 //Process clues
                 result = Result.NoChange;
@@ -446,141 +387,10 @@ namespace ConsoleApplication1
                 {
                     result = ApplySimpleRules(lane) | result;
                     if (Result.Failed == (result & Result.Failed)) return Result.Failed;
-
-                    Debug.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
-                    Console.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
-
-                    PrintValues();
-
-                }
-
-                //if (result == Result.Changed) continue;
-
-                //foreach (Lane lane in AllLanes)
-                //{
-                //    result = ApplyAdvancedRules(lane) | result;
-                //    if (Result.Failed == (result & Result.Failed)) return Result.Failed;
-                //}
-
-                //if (result == Result.Changed) continue;
-
-                ////PrintValues();
-                //foreach (var lane in AllLanes)
-                //{
-                //    result = ApplyMoreAdvancedRules(lane) | result;
-                //    if (Result.Failed == (result & Result.Failed)) return Result.Failed;
-
-                //    //Debug.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
-                //    //Console.WriteLine(Environment.NewLine + "Lane first indices: " + lane.FirstIndices());
-
-                //    //PrintValues();
-                //}
-            }
-
-            return result;
-        }
-
-        private static Result ApplyAdvancedRules(Lane lane)
-        {
-            int clue = lane.Clue;
-            int size = lane.Cells.Count;
-            if (clue == 2 && size == Size)
-            {
-                Lane oppositeLane = lane.GetOppositeLane();
-                if ( oppositeLane.Clue == 2 && oppositeLane.Cells.Count == Size)
-                {
-                    if (!lane.Cells[0].PossibleValues.Contains(Size - 1))
-                    {
-                        return oppositeLane.Cells[0].SetCellValue(Size - 1);
-                    }
-
-                    if (!oppositeLane.Cells[0].PossibleValues.Contains(Size - 1))
-                    {
-                        return lane.Cells[0].SetCellValue(Size - 1);
-                    }
-                }
-            }
-
-            if (clue < 2) return Result.NoChange;
-
-            List<int> possibleValuesInLane = lane.Cells.SelectMany(c => c.PossibleValues).Distinct().ToList();
-            possibleValuesInLane.Sort();
-            int numberOfVisible = 0;
-            int firstPossiblePositionOfLastItem = possibleValuesInLane.Count;
-            int i = possibleValuesInLane.Count - 1;
-            for (; i >= 0; i--)
-            {
-                int lastPossiblePosition = lane.Cells.FindLastIndex(c => c.PossibleValues.Contains(possibleValuesInLane[i]));
-                if (lastPossiblePosition >= firstPossiblePositionOfLastItem) break;
-                numberOfVisible++;
-                firstPossiblePositionOfLastItem = lane.Cells.FindIndex(c => c.PossibleValues.Contains(possibleValuesInLane[i]));
-            }
-
-            Result result = Result.NoChange;
-            if (firstPossiblePositionOfLastItem > 1)
-            {
-                if (clue - numberOfVisible == 1)
-                {
-                    result = lane.Cells[0].RemoveValue(possibleValuesInLane.First());
-                    if (result == Result.Failed) return Result.Failed;
-                    if (lane.Cells.Count > 1)
-                        result = lane.Cells[1].RemoveValue(possibleValuesInLane[i]) | result;
-                }
-                else if (firstPossiblePositionOfLastItem == clue - numberOfVisible)
-                {
-                    result = lane.Cells[firstPossiblePositionOfLastItem - 1].RemoveValue(lane.Cells.GetRange(0, firstPossiblePositionOfLastItem).Select(c => c.PossibleValues.Min()).Min());
                 }
             }
 
             return result;
-        }
-
-        private static Result ApplyMoreAdvancedRules(Lane lane)
-        {
-            if (lane.Clue < 3) return Result.NoChange;
-
-            int numberOfVisible = 1;
-            var i = 1;
-            for (; i < lane.Cells.Count; i++)
-            {
-                if (lane.Cells[i].ValueSet == 0) break;
-                if (lane.Cells[i].ValueSet > lane.Cells.GetRange(0, i).Select(c => c.PossibleValues.Max()).Max())
-                    numberOfVisible++;
-            }
-
-            if (numberOfVisible == 1 && lane.Cells[0].ValueSet == 0) return Result.NoChange;
-
-            if (lane.Clue - numberOfVisible == 1)
-                return lane.Cells[i].SetCellValue(lane.Cells[i].PossibleValues.Max());
-            if (lane.Clue - numberOfVisible > 1)
-                return lane.Cells[i].RemoveValue(lane.Cells[i].PossibleValues.Max());
-            return Result.NoChange;
-        }
-
-        public static string PrintValues()
-        {
-            Stack<Lane> orderedClues = new Stack<Lane>(Enumerable.Range(0, 4 * Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex)))
-                .OrderBy(t => t.Item2[0])
-                .ThenBy(t => t.Item2[1]).Select(t => AllLanes[t.Item1]).Reverse());
-
-            string values = Environment.NewLine
-                                                + "      " +
-                                                string.Join(string.Concat(Enumerable.Range(0,2*Size-2).Select(i => " ")),
-                                                    Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) +
-                                                Environment.NewLine
-                                                + string.Join(Environment.NewLine,
-                                                    AllCells.Select(r =>
-                                                        orderedClues.Pop() + " |" +
-                                                        string.Join("|", r.Select(c => string.Join(",", c.PossibleValues) + string.Concat(Enumerable.Range(0, Size - c.PossibleValues.Count).Select(i => "  ")))) + "| " +
-                                                        orderedClues.Pop())) + Environment.NewLine
-                                                + "      " +
-                                                string.Join(string.Concat(Enumerable.Range(0,2*Size-2).Select(i => " ")),
-                                                    Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) +
-                                                Environment.NewLine;
-            Debug.Print(values);
-            Console.Write(values);
-            return values;
         }
 
         private static Result ApplySimpleRules(Lane lane)
@@ -643,23 +453,6 @@ namespace ConsoleApplication1
         {
             return AllCells[x][y];
         }
-
-        public static int[] GetLaneIndices2(int clueIndex)
-        {
-            if (clueIndex < Size)
-            {
-                return new[] { -1, clueIndex };
-            }
-            if (clueIndex < 2 * Size)
-            {
-                return new[] { clueIndex - Size, 1 };
-            }
-            if (clueIndex < 3 * Size)
-            {
-                return new[] { Size, 3 * Size - clueIndex - 1 };
-            }
-            return new[] { 4 * Size - clueIndex - 1, 0 };
-        }
     }
 
     [Flags]
@@ -675,7 +468,22 @@ namespace ConsoleApplication1
     {
         private const int Size = Skyscrapers.Size;
 
-
+        public static int[] GetLaneIndices2(int clueIndex)
+        {
+            if (clueIndex < Skyscrapers.Size)
+            {
+                return new[] { -1, clueIndex };
+            }
+            if (clueIndex < 2 * Skyscrapers.Size)
+            {
+                return new[] { clueIndex - Skyscrapers.Size, 1 };
+            }
+            if (clueIndex < 3 * Skyscrapers.Size)
+            {
+                return new[] { Skyscrapers.Size, 3 * Skyscrapers.Size - clueIndex - 1 };
+            }
+            return new[] { 4 * Skyscrapers.Size - clueIndex - 1, 0 };
+        }
 
         [Test]
         public void SolveSkyscrapers1()
@@ -692,7 +500,7 @@ namespace ConsoleApplication1
                 new []{2, 1, 3, 4 }};
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -717,7 +525,7 @@ namespace ConsoleApplication1
 
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -743,7 +551,7 @@ namespace ConsoleApplication1
 
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -769,7 +577,7 @@ namespace ConsoleApplication1
 
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -795,7 +603,7 @@ namespace ConsoleApplication1
 
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -821,7 +629,7 @@ namespace ConsoleApplication1
 
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -833,12 +641,12 @@ namespace ConsoleApplication1
         public static string ErrorMessage(int[][] expected, int[][] actual, Stack<int> orderedClues)
         {
             return Environment.NewLine
-                   + string.Join(Environment.NewLine, expected.Select(r => string.Join("|", r)))
+                   + String.Join(Environment.NewLine, expected.Select(r => String.Join("|", r)))
                    + Environment.NewLine + Environment.NewLine
-                   + "   " + string.Join("  ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
-                   + string.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + string.Join("|", r.Select(c => c.PossibleValues.Count == 1  ? c.PossibleValues.First() == expected[c.X][c.Y] ? c.PossibleValues.First() + " " : c.PossibleValues.First() + "*" : " *")) + "| " + orderedClues.Pop())) + Environment.NewLine
-                   + "   " + string.Join("  ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
-                   + Environment.NewLine + Skyscrapers.PrintValues()
+                   + "   " + String.Join("  ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
+                   + String.Join(Environment.NewLine, Skyscrapers.AllCells.Select(r => orderedClues.Pop() + " |" + String.Join("|", r.Select(c => c.PossibleValues.Count == 1  ? c.PossibleValues.First() == expected[c.X][c.Y] ? c.PossibleValues.First() + " " : c.PossibleValues.First() + "*" : " *")) + "| " + orderedClues.Pop())) + Environment.NewLine
+                   + "   " + String.Join("  ", Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) + Environment.NewLine
+                   //+ Environment.NewLine + Skyscrapers.PrintValues()
                    + Environment.NewLine + "Difference index: " + DifferenceIndex(expected, actual)
                    + Environment.NewLine;
 
@@ -854,7 +662,7 @@ namespace ConsoleApplication1
                 }
             }
 
-            return string.Empty;
+            return String.Empty;
         }
     }
 
@@ -878,7 +686,7 @@ namespace ConsoleApplication1
                              new []{ 3, 2, 5, 4, 6, 1 }};
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -902,7 +710,7 @@ namespace ConsoleApplication1
                              new []{ 3, 4, 2, 5, 1, 6 }};
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -926,7 +734,7 @@ namespace ConsoleApplication1
                              new []{ 1, 5, 4, 3, 2, 6 }};
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -949,7 +757,7 @@ namespace ConsoleApplication1
             };
 
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
 
             var actual = Skyscrapers.SolvePuzzle(clues);
@@ -957,28 +765,7 @@ namespace ConsoleApplication1
                 SkyscrapersTests.ErrorMessage(expected, actual, orderedClues));
         }
 
-        [Test]
-        public void SolvePuzzle5()
-        {
-            var clues = new[] { 1,3,2,3,3,3,5,4,1,2,3,4,4,3,2,5,1,5,2,2,2,2,3,1};
-
-            var expected = new[]{
-                new []{ 3, 1, 6, 2, 4, 5 },
-                new []{ 4, 2, 5, 3, 1, 6 },
-                new []{ 2, 5, 4, 6, 3, 1 },
-                new []{ 5, 6, 3, 1, 2, 4 },
-                new []{ 1, 4, 2, 5, 6, 3 },
-                new []{ 6, 3, 1, 4, 5, 2 }
-            };
-
-            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
-                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, Skyscrapers.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
-                .ThenBy(t => t.Item2[1]).Select(t => clues[t.Item1]).Reverse());
-
-            var actual = Skyscrapers.SolvePuzzle(clues);
-            CollectionAssert.AreEqual(expected, actual,
-                SkyscrapersTests.ErrorMessage(expected, actual, orderedClues));
-        }
+        
     }
 
 }
