@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Castle.Core.Internal;
 using NUnit.Framework;
 
 namespace ConsoleApplication1
@@ -298,7 +299,7 @@ namespace ConsoleApplication1
 
             _processingClues = true;
             if(Result.Failed == (ProcessClues() & Result.Failed)) return null;
-            _processingClues = false;
+            //_processingClues = false;
 
             if (!PuzzleSolved())
             {
@@ -330,15 +331,13 @@ namespace ConsoleApplication1
                 }
 
                 bool puzzleSolved = PuzzleSolved();
-
                 if (!puzzleSolved)
                 {
                     if (Result.Failed == (ProcessClues() & Result.Failed))
                     {
                         backup.Restore();
-                        return false;
+                        continue;
                     }
-
                     puzzleSolved = PuzzleSolved();
                 }
 
@@ -433,6 +432,61 @@ namespace ConsoleApplication1
                 }
             }
 
+            result = Result.Changed;
+            while (result == Result.Changed)
+            {
+                //Process clues
+                result = Result.NoChange;
+                for (var index = 0; index < AllLanes.Length; index++)
+                {
+                    var lane = AllLanes[index];
+                    result = ApplySpecialRules(lane) | result;
+                    if (Result.Failed == (result & Result.Failed)) return Result.Failed;
+                }
+            }
+
+            return result;
+        }
+
+        private static Result ApplySpecialRules(Lane lane)
+        {
+            if (lane.Cells.Count < 3) return Result.NoChange;
+            int visible = 0;
+            int highestHeight = 0;
+            var i = 0;
+            for (; i < lane.Cells.Count; i++)
+            {
+                Cell cell = lane.Cells[i];
+                if (cell.ValueSet == 0) break;
+                if (cell.ValueSet > highestHeight)
+                {
+                    highestHeight = cell.ValueSet;
+                    visible++;
+                }
+            }
+
+            int max = lane.Cells.Select(c => c.PossibleValues.Max()).Max();
+            if (highestHeight == max) return Result.NoChange;
+
+            int maxIndex = lane.Cells.FindIndex(i, c => c.ValueSet == max);
+
+            Result result = Result.NoChange;
+
+            if (lane.Clue - visible - 1 == maxIndex - i)
+            {
+                for (int j = i; j < maxIndex; j++)
+                {
+                    int[] valuesToBeRemoved = lane.Cells[j].PossibleValues.Where(p => p < highestHeight).ToArray();
+                    foreach (var v in valuesToBeRemoved)
+                    {
+                        int cellsCount = lane.Cells.Count;
+                        result = lane.Cells[j].RemoveValue(v) | result;
+                        if (Result.Failed == (result & Result.Failed)) return Result.Failed;
+                        if (cellsCount != lane.Cells.Count) return result;
+                    }
+                }
+            }
+
             return result;
         }
 
@@ -463,6 +517,7 @@ namespace ConsoleApplication1
             }
             
             List<int> possibleValuesInLane = lane.Cells.SelectMany(c => c.PossibleValues).Distinct().ToList();
+            if (possibleValuesInLane.Count != size) return Result.Failed;
             possibleValuesInLane.Sort();
 
             if (clue == 2 && size > 1)
@@ -478,8 +533,10 @@ namespace ConsoleApplication1
                     Cell cell = lane.Cells.ElementAtOrDefault(i);
                     if (cell != null)
                     {
+                        int cellCount = lane.Cells.Count;
                         result = cell.RemoveValue(possibleValuesInLane[indexToBeRemoved-1]) | result;
                         if (Result.Failed == (result & Result.Failed)) return Result.Failed;
+                        if (cellCount != lane.Cells.Count) return result;
                     }
                 }
             }
@@ -875,20 +932,75 @@ namespace ConsoleApplication1
         [Test]
         public void Test_1_Medium()
         {
+            int index = 0;
+            int[] clues1 = clues[index];
+            int[][] expected1 = expected[index];
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
                 .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests4by4.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
-                .ThenBy(t => t.Item2[1]).Select(t => clues[0][t.Item1]).Reverse());
+                .ThenBy(t => t.Item2[1]).Select(t => clues1[t.Item1]).Reverse());
 
-            var actual = Skyscrapers.SolvePuzzle(clues[0]);
-            CollectionAssert.AreEqual(expected[0], actual,
-                SkyscrapersTests4by4.ErrorMessage(expected[0], actual, orderedClues));
+            var actual = Skyscrapers.SolvePuzzle(clues1);
+            CollectionAssert.AreEqual(expected1, actual,
+                SkyscrapersTests4by4.ErrorMessage(expected1, actual, orderedClues));
         }
 
         [Test]
         public void Test_2_VeryHard()
         {
-            var actual = Skyscrapers.SolvePuzzle(clues[1]);
-            CollectionAssert.AreEqual(expected[1], actual);
+            int index = 1;
+            int[] clues1 = clues[index];
+            int[][] expected1 = expected[index];
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests4by4.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues1[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues1);
+            CollectionAssert.AreEqual(expected1, actual,
+                SkyscrapersTests4by4.ErrorMessage(expected1, actual, orderedClues));
+        }
+
+        [Test]
+        public void Test_3_VeryHard()
+        {
+            int index = 1;
+            int[] clues1 = {6,4,0,2,0,0,3,0,3,3,3,0,0,4,0,5,0,5,0,2,0,0,0,0,4,0,0,3};
+            int[][] expected1 = { 
+                new[] { 2, 1, 6, 4, 3, 7, 5 },
+                new[] { 3, 2, 5, 7, 4, 6, 1 },
+                new[] { 4, 6, 7, 5, 1, 2, 3 },
+                new[] { 1, 3, 2, 6, 7, 5, 4 },
+                new[] { 5, 7, 1, 3, 2, 4, 6 },
+                new[] { 6, 4, 3, 2, 5, 1, 7 },
+                new[] { 7, 5, 4, 1, 6, 3, 2 } };
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests4by4.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues1[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues1);
+            CollectionAssert.AreEqual(expected1, actual,
+                SkyscrapersTests4by4.ErrorMessage(expected1, actual, orderedClues));
+        }
+
+        [Test]
+        public void Test_4_VeryHard()
+        {
+            int index = 1;
+            int[] clues1 = {0,0,0,5,0,0,3,0,6,3,4,0,0,0,3,0,0,0,2,4,0,2,6,2,2,2,0,0};
+            int[][] expected1 = { 
+                new[] { 2, 1, 6, 4, 3, 7, 5 },
+                new[] { 3, 2, 5, 7, 4, 6, 1 },
+                new[] { 4, 6, 7, 5, 1, 2, 3 },
+                new[] { 1, 3, 2, 6, 7, 5, 4 },
+                new[] { 5, 7, 1, 3, 2, 4, 6 },
+                new[] { 6, 4, 3, 2, 5, 1, 7 },
+                new[] { 7, 5, 4, 1, 6, 3, 2 } };
+            Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
+                .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests4by4.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
+                .ThenBy(t => t.Item2[1]).Select(t => clues1[t.Item1]).Reverse());
+
+            var actual = Skyscrapers.SolvePuzzle(clues1);
+            CollectionAssert.AreEqual(expected1, actual,
+                SkyscrapersTests4by4.ErrorMessage(expected1, actual, orderedClues));
         }
     }
 }
