@@ -124,20 +124,13 @@ namespace ConsoleApplication1
 
                     if (lane.Clue == 0) continue;
 
-                    //if (value == lane.Cells.Select(c => c.PossibleValues.Max()).Max())
-                    //{
-                    //    int highestValueIndex = lane.Cells.FindIndex(c => c.ValueSet == value);
-                    //    lane.Cells.RemoveRange(highestValueIndex, lane.Cells.Count-highestValueIndex);
-                    //    lane.Clue--;
-                    //}
-
                     for (var i = lane.Cells.Count - 1; i >= 0; i--)
                     {
                         Cell cell = lane.Cells[i];
                         if(cell.ValueSet == 0) break;
                         lane.Cells.RemoveAt(i);
                         if (!lane.Cells.Any()) lane.Clue = 0;
-                        else if (cell.ValueSet > lane.Cells.Select(c => c.PossibleValues.Max()).Max()) lane.Clue--;
+                        else if (cell.ValueSet >= lane.Cells.Select(c => c.PossibleValues.Max()).Max()) lane.Clue--;
                     }
                 }
 
@@ -152,7 +145,7 @@ namespace ConsoleApplication1
             }
         }
 
-        private class Lane
+        internal class Lane
         {
             public int Clue;
             public readonly List<Cell> Cells;
@@ -233,10 +226,10 @@ namespace ConsoleApplication1
             }
         }
 
-        private class Backup
+        internal class Backup
         {
-            private readonly Cell[][] _allCells;
-            private readonly Lane[] _allLanes;
+            public readonly Cell[][] _allCells;
+            public readonly Lane[] _allLanes;
 
             public Backup()
             {
@@ -276,6 +269,8 @@ namespace ConsoleApplication1
                 }
             }
         }
+
+        public static int[][] Expected { get; set; }
 
         public static int[][] SolvePuzzle(int[] clues)
         {
@@ -324,6 +319,8 @@ namespace ConsoleApplication1
             Backup backup = new Backup();
             foreach (Cell cell in GetChoices(out int valueToEliminate))
             {
+                if(Expected[cell.X][cell.Y] == valueToEliminate) continue;
+
                 if (Result.Failed == (cell.RemoveValue(valueToEliminate) & Result.Failed))
                 {
                     backup.Restore();
@@ -554,12 +551,20 @@ namespace ConsoleApplication1
             return AllCells[x][y];
         }
 
-        public static string PrintValues()
+        public static string PrintValues(Backup backup = null)
         {
+            Lane[] allLanes = AllLanes;
+            Cell[][] allCells = AllCells;
+            if (backup != null)
+            {
+                allLanes = backup._allLanes;
+                allCells = backup._allCells;
+            }
+
             Stack<Lane> orderedClues = new Stack<Lane>(Enumerable.Range(0, 4 * Size)
                 .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests4by4.GetLaneIndices2(clueIndex)))
                 .OrderBy(t => t.Item2[0])
-                .ThenBy(t => t.Item2[1]).Select(t => AllLanes[t.Item1]).Reverse());
+                .ThenBy(t => t.Item2[1]).Select(t => allLanes[t.Item1]).Reverse());
 
             string values = Environment.NewLine
                             + "      " +
@@ -567,7 +572,7 @@ namespace ConsoleApplication1
                                 Enumerable.Range(0, Size).Select(i => orderedClues.Pop())) +
                             Environment.NewLine
                             + string.Join(Environment.NewLine,
-                                AllCells.Select(r =>
+                                allCells.Select(r =>
                                     orderedClues.Pop() + " |" +
                                     string.Join("|", r.Select(c => string.Join(",", c.PossibleValues) + string.Concat(Enumerable.Range(0, Size - c.PossibleValues.Count).Select(i => "  ")))) + "| " +
                                     orderedClues.Pop())) + Environment.NewLine
@@ -987,17 +992,17 @@ namespace ConsoleApplication1
             int index = 1;
             int[] clues1 = {0,0,0,5,0,0,3,0,6,3,4,0,0,0,3,0,0,0,2,4,0,2,6,2,2,2,0,0};
             int[][] expected1 = { 
-                new[] { 2, 1, 6, 4, 3, 7, 5 },
-                new[] { 3, 2, 5, 7, 4, 6, 1 },
-                new[] { 4, 6, 7, 5, 1, 2, 3 },
-                new[] { 1, 3, 2, 6, 7, 5, 4 },
-                new[] { 5, 7, 1, 3, 2, 4, 6 },
-                new[] { 6, 4, 3, 2, 5, 1, 7 },
-                new[] { 7, 5, 4, 1, 6, 3, 2 } };
+                new[] { 3, 5, 6, 1, 7, 2, 4 },
+                new[] { 7, 6, 5, 2, 4, 3, 1 },
+                new[] { 2, 7, 1, 3, 6, 4, 5 },
+                new[] { 4, 3, 7, 6, 1, 5, 2 },
+                new[] { 6, 4, 2, 5, 3, 1, 7 },
+                new[] { 1, 2, 3, 4, 5, 7, 6 },
+                new[] { 5, 1, 4, 7, 2, 6, 3 } };
             Stack<int> orderedClues = new Stack<int>(Enumerable.Range(0, 4 * Skyscrapers.Size)
                 .Select(clueIndex => new Tuple<int, int[]>(clueIndex, SkyscrapersTests4by4.GetLaneIndices2(clueIndex))).OrderBy(t => t.Item2[0])
                 .ThenBy(t => t.Item2[1]).Select(t => clues1[t.Item1]).Reverse());
-
+            Skyscrapers.Expected = expected1;
             var actual = Skyscrapers.SolvePuzzle(clues1);
             CollectionAssert.AreEqual(expected1, actual,
                 SkyscrapersTests4by4.ErrorMessage(expected1, actual, orderedClues));
