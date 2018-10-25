@@ -319,8 +319,6 @@ namespace ConsoleApplication1
             Backup backup = new Backup();
             foreach (Cell cell in GetChoices(out int valueToEliminate))
             {
-                if(Expected[cell.X][cell.Y] == valueToEliminate) continue;
-
                 if (Result.Failed == (cell.RemoveValue(valueToEliminate) & Result.Failed))
                 {
                     backup.Restore();
